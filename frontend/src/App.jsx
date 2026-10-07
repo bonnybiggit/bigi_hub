@@ -7,8 +7,10 @@ import Jobs from './pages/Jobs.jsx'
 import JobDetails from './pages/JobDetails.jsx'
 import Scholarships from './pages/Scholarships.jsx'
 import NotFound from './pages/NotFound.jsx'
+import useSavedOpportunities from './hooks/useSavedOpportunities.js'
 
 function App() {
+  const { savedOpportunityIds, toggleSavedOpportunity } = useSavedOpportunities()
   const [savedJobIds, setSavedJobIds] = useState([])
 
   function toggleSavedJob(id) {
@@ -21,7 +23,7 @@ function App() {
     <MainLayout>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/opportunities" element={<Opportunities />} />
+        <Route path="/opportunities" element={<Opportunities savedOpportunityIds={savedOpportunityIds} onSaveOpportunity={toggleSavedOpportunity} />} />
         <Route path="/jobs" element={<Jobs savedJobIds={savedJobIds} onSaveJob={toggleSavedJob} />} />
         <Route path="/jobs/:slug" element={<JobDetails savedJobIds={savedJobIds} onSaveJob={toggleSavedJob} />} />
         <Route path="/scholarships" element={<Scholarships />} />

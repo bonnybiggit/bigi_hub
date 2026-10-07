@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { applicationUrlValidation, slugValidation, DATABASE_TIMEOUT_MS } from '../validation/listings.js'
 
 const supportedCountryCodes = ['NG', 'GH', 'KE', 'ZA', 'RW', 'SN']
 const categories = [
@@ -24,6 +25,7 @@ const opportunitySchema = new mongoose.Schema({
     unique: true,
     trim: true,
     lowercase: true,
+    validate: slugValidation,
   },
   organization: {
     type: String,
@@ -70,6 +72,7 @@ const opportunitySchema = new mongoose.Schema({
   applyUrl: {
     type: String,
     trim: true,
+    validate: applicationUrlValidation,
   },
   listedDate: {
     type: Date,
@@ -77,6 +80,7 @@ const opportunitySchema = new mongoose.Schema({
   },
 }, {
   timestamps: true,
+  bufferTimeoutMS: DATABASE_TIMEOUT_MS,
 })
 
 opportunitySchema.index({ countryCode: 1, category: 1, deadline: 1 })

@@ -1,0 +1,104 @@
+.home .home-hero { padding: clamp(1.25rem, 3vw, 2.5rem); }
+.home .home-hero h1, .home .home-section-heading { margin-bottom: var(--space-4); }
+.home .home-eyebrow { margin-bottom: var(--space-3); }
+.home .home-actions { margin-top: var(--space-6); }
+.home .home-section, .home .home-newsletter { margin-top: var(--space-8); }
+.home .home-newsletter { padding: clamp(1.25rem, 3vw, 2rem); gap: var(--space-6); }
+.home .home-card-grid { gap: var(--space-4); }
+.home .home-card, .home .home-category-card { padding: 1.25rem; }
+.home .home-final-cta { padding: var(--space-8) var(--space-4) var(--space-4); }
+.home .home-section-heading h2,
+.home .home-newsletter h2,
+.home .home-final-cta h2 {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  letter-spacing: -0.025em;
+}
+
+.home .home-section-heading > p,
+.home .home-section-heading-row > div > p {
+  max-width: 65ch;
+}
+
+.home .home-card-grid {
+  align-items: stretch;
+}
+
+.home .home-card h3 {
+  font-size: 1.125rem;
+}
+
+.home .home-card-link {
+  width: 100%;
+  justify-content: space-between;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.home .home-hero-description,
+.home .home-card-excerpt {
+  line-height: 1.7;
+}
+
+.home .home-form-status:not(:empty) {
+  padding: var(--space-3);
+  border-left: 3px solid var(--color-secondary);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+}
+
+.public-not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 48rem;
+  margin: var(--space-8) auto;
+  padding: clamp(1.5rem, 6vw, 4rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.public-not-found > svg {
+  color: var(--color-secondary);
+}
+
+.public-not-found h1 {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  letter-spacing: -0.035em;
+}
+
+.public-not-found h1,
+.public-not-found .home-eyebrow {
+  margin: 0;
+}
+
+.public-not-found > p:last-of-type {
+  max-width: 50ch;
+  color: var(--color-text-muted);
+}
+
+.public-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 40rem) {
+  .home .home-card,
+  .home .home-category-card {
+    padding: var(--space-4);
+  }
+
+  .home .home-hero-description {
+    font-size: 1rem;
+  }
+
+  .public-recovery-actions,
+  .public-recovery-actions .home-button {
+    width: 100%;
+  }
+}

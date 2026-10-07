@@ -1,0 +1,238 @@
+html { scroll-padding-top: 8rem; }
+.site-topbar { position: sticky; top: 0; z-index: 50; flex-shrink: 0; background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.site-topbar .site-header { padding-block: var(--space-2); }
+.news-ticker { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-2) max(var(--space-4), calc((100% - 75rem) / 2)); border-bottom: 1px solid var(--color-border); background: var(--color-background); }
+.news-label { display: grid; font-size: 0.8125rem; }
+.news-label span { color: var(--color-text-muted); font-size: 0.6875rem; }
+.news-window { min-width: 0; overflow: hidden; }
+.news-track { display: flex; width: max-content; min-width: 200%; animation: news-scroll 24s linear infinite; font-size: 0.875rem; }
+.news-track span { flex: 1 0 auto; padding-right: var(--space-12); white-space: nowrap; }
+.news-toggle { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); cursor: pointer; }
+@keyframes news-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.social-rail { position: fixed; z-index: 40; right: var(--space-2); top: 50%; transform: translateY(-50%); display: grid; justify-items: center; gap: var(--space-1); padding: var(--space-1); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-md); }
+.social-rail { width: 3.125rem; }
+.social-rail a { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: var(--radius-md); }
+.social-rail img { width: 1.25rem; height: 1.25rem; }
+.social-rail a:hover { background: var(--color-background); }
+.social-rail-note { color: var(--color-text-muted); font-size: 0.625rem; }
+.main-content { min-width: 0; padding: var(--space-3) 4.5rem var(--space-3) var(--space-4); }
+.site-footer { padding-right: max(4.5rem, calc((100% - 75rem) / 2)); margin-top: var(--space-6); padding-block: var(--space-6); }
+/* Mobile and tablets use normal gutters; the fixed rail overlays the page. */
+@media (max-width: 64rem) {
+  .main-content { padding-right: var(--space-4); }
+  .site-footer { padding-right: var(--space-4); }
+}
+.main-content .jobs-hero, .main-content .opportunities-hero, .main-content .scholarships-hero { padding: clamp(1rem, 3vw, 2rem); }
+.main-content .jobs-layout, .main-content .opportunities-layout { gap: var(--space-4); }
+.main-content .scholarships-controls { margin-block: var(--space-4) var(--space-6); padding: var(--space-4); }
+.main-content .scholarships-grid { gap: var(--space-4); }
+@media (max-width: 75rem) {
+  .main-content .jobs-layout, .main-content .opportunities-layout { grid-template-columns: minmax(0, 1fr); }
+  .main-content .jobs-filter-grid, .main-content .opportunities-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .main-content .jobs-sidebar, .main-content .opportunities-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 48rem) {
+  html { scroll-padding-top: 13rem; }
+}
+@media (max-width: 40rem) {
+  .main-content { padding-inline: var(--space-3); }
+  .social-rail { right: var(--space-1); width: 2.125rem; padding: 0.1875rem; gap: 0.1875rem; }
+  .social-rail a { width: 1.625rem; height: 1.625rem; }
+  .social-rail img { width: 1rem; height: 1rem; }
+  .social-rail-note { font-size: 0.5rem; }
+  .main-content .jobs-filter-grid, .main-content .opportunities-filter-grid,
+  .main-content .jobs-sidebar, .main-content .opportunities-sidebar { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-height: 36rem) {
+  .social-rail { max-height: calc(100dvh - 1rem); overflow-y: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .news-track { width: auto; min-width: 0; animation: none; }
+  .news-track span { white-space: normal; padding-right: 0; }
+  .news-track [aria-hidden='true'], .news-toggle { display: none; }
+}
+
+/* Reserve usable card widths within the listing columns, rather than the viewport. */
+.main-content .jobs-list,
+.main-content .opportunities-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+}
+
+.social-rail {
+  scrollbar-width: none;
+}
+
+.social-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.main-content :is(.home-button, .home-text-link) {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.main-content :is(input, select) {
+  font-size: 1rem;
+}
+
+.main-content :is(.jobs-page, .opportunities-page, .scholarships-page, .home) {
+  min-width: 0;
+}
+
+.main-content :is(.pagination button, .opportunity-save) {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+@media (max-width: 30rem) {
+  .main-content :is(.home-hero h1, .jobs-hero h1, .opportunities-hero h1, .scholarships-hero h1, .job-details h1, .public-not-found h1) {
+    font-size: clamp(1.5rem, 7vw, 1.875rem);
+    line-height: 1.25;
+  }
+
+  .main-content :is(.home-hero, .home-newsletter, .public-not-found, .scholarship-card, .job-details-facts) {
+    padding: var(--space-4);
+  }
+
+  .main-content :is(.jobs-empty, .opportunities-empty, .scholarships-state) {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .main-content :is(.home-button, .home-text-link) {
+    padding-inline: var(--space-3);
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-height: 42rem) and (max-width: 48rem) {
+  .site-topbar .site-header {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-2);
+    padding-block: var(--space-1);
+  }
+
+  .site-topbar .site-header nav {
+    grid-column: 2;
+  }
+
+  .site-topbar .site-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--space-2);
+    text-align: center;
+  }
+
+  .site-topbar .site-brand {
+    font-size: 1rem;
+  }
+
+  .site-topbar .site-nav a {
+    font-size: 0.8125rem;
+  }
+
+  .news-ticker {
+    padding-block: var(--space-1);
+    gap: var(--space-2);
+  }
+}
+.header-menu-toggle { display: none; }
+.header-menu-inner { min-width: 0; }
+
+@media (max-width: 48rem) {
+  html { scroll-padding-top: 8rem; }
+  .site-topbar .site-header {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2);
+  }
+  .header-menu-toggle {
+    display: grid;
+    place-items: center;
+    grid-column: 2;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-primary);
+    cursor: pointer;
+  }
+  .site-topbar .site-header > .header-navigation {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+    transition: grid-template-rows 180ms ease, opacity 180ms ease, visibility 180ms;
+  }
+  .header-menu-inner { min-height: 0; overflow: hidden; }
+  .site-topbar .site-header > .header-navigation.is-open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .site-topbar .header-navigation .site-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-4);
+    max-height: calc(100dvh - 8rem);
+    overflow-y: auto;
+    text-align: left;
+  }
+  .site-topbar .header-navigation .site-nav a {
+    display: block;
+    padding: var(--space-3);
+    min-height: 2.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.9375rem;
+  }
+  .header-navigation .site-nav a:hover,
+  .header-navigation .site-nav a[aria-current='page'] { background: var(--color-background); }
+}
+
+@media (max-width: 30rem) {
+  .main-content { padding-inline: var(--space-3); }
+  .site-footer { padding-inline: var(--space-4); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-topbar .site-header > .header-navigation { transition: none; }
+}
+
+/* Colour treatments share tokens without changing component geometry. */
+.site-brand { color: var(--color-primary); }
+.site-nav a:hover, .site-nav a[aria-current='page'] { color: var(--color-interactive); }
+.news-ticker { background: var(--color-primary); color: var(--color-surface); border-bottom-color: var(--color-primary); }
+.news-label { color: var(--color-accent); }
+.news-label span { color: var(--color-text-inverse-muted); }
+.news-toggle, .header-menu-toggle { color: var(--color-interactive); }
+.main-content :is(.home-hero, .jobs-hero, .opportunities-hero, .scholarships-hero) {
+  background: linear-gradient(120deg, var(--color-surface), var(--color-interactive-soft));
+}
+.main-content .home-eyebrow { color: var(--color-accent-text); }
+.main-content .home-tag { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.main-content .home-button { border-color: var(--color-interactive); }
+.main-content .home-button-primary { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-primary); }
+.main-content .home-button-primary:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
+.main-content .home-button-secondary { color: var(--color-interactive); }
+.main-content .home-button-secondary:hover { background: var(--color-interactive-soft); }
+.main-content :is(.jobs-clear, .opportunities-clear, .scholarships-clear, .opportunity-save, .pagination button) { color: var(--color-interactive); }
+.main-content .pagination button[aria-current='page'] { background: var(--color-interactive); border-color: var(--color-interactive); color: var(--color-surface); }
+.main-content .opportunity-save[aria-pressed='true'] { border-color: var(--color-interactive); background: var(--color-interactive-soft); }
+.main-content .pagination button:hover:not(:disabled):not([aria-current]),
+.social-rail a:hover,
+.site-topbar .header-navigation .site-nav a:hover,
+.site-topbar .header-navigation .site-nav a[aria-current='page'] { background: var(--color-interactive-soft); }
+.site-footer { --color-text-muted: var(--color-text-inverse-muted); background: var(--color-primary); color: var(--color-surface); border-top-color: var(--color-primary); }
+.site-footer a { color: var(--color-surface); }
+.site-footer a:hover { color: var(--color-accent); }
+.site-footer :focus-visible { outline-color: var(--color-accent); }
+.social-rail { background: var(--color-surface); border-color: var(--color-border); }

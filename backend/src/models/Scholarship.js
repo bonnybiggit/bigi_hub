@@ -3,7 +3,7 @@ import { applicationUrlValidation, slugValidation, DATABASE_TIMEOUT_MS } from '.
 
 const supportedCountryCodes = ['NG', 'GH', 'KE', 'ZA', 'RW', 'SN']
 
-const jobSchema = new mongoose.Schema({
+const scholarshipSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
@@ -38,30 +38,17 @@ const jobSchema = new mongoose.Schema({
     uppercase: true,
     enum: supportedCountryCodes,
   },
-  jobType: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  workType: {
-    type: String,
-    enum: ['Remote', 'Hybrid', 'On-site'],
-  },
-  experienceLevel: {
+  level: {
     type: String,
     trim: true,
   },
-  compensation: {
+  eligibility: {
     type: String,
     trim: true,
   },
-  requirements: {
-    type: [String],
-    default: [],
-  },
-  benefits: {
-    type: [String],
-    default: [],
+  funding: {
+    type: String,
+    trim: true,
   },
   deadline: {
     type: Date,
@@ -81,9 +68,9 @@ const jobSchema = new mongoose.Schema({
   bufferTimeoutMS: DATABASE_TIMEOUT_MS,
 })
 
-jobSchema.index({ countryCode: 1, deadline: 1, listedDate: -1 })
-jobSchema.index({ title: 'text', organization: 'text', description: 'text' })
+scholarshipSchema.index({ countryCode: 1, deadline: 1, listedDate: -1 })
+scholarshipSchema.index({ title: 'text', organization: 'text', description: 'text' })
 
-const Job = mongoose.model('Job', jobSchema)
+const Scholarship = mongoose.model('Scholarship', scholarshipSchema)
 
-export default Job
+export default Scholarship

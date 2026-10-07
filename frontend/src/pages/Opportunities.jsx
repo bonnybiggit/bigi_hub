@@ -5,12 +5,12 @@ import OpportunityCard from '../components/OpportunityCard.jsx'
 import ArticleCard from '../components/ArticleCard.jsx'
 import Pagination from '../components/Pagination.jsx'
 import {
-  demoOpportunities,
   opportunityArticles,
   opportunityCategories,
   opportunityFilterFields,
   filterAndSortOpportunities,
 } from '../data/opportunities.js'
+import useOpportunities from '../hooks/useOpportunities.js'
 import '../styles/home.css'
 import '../styles/opportunities.css'
 
@@ -28,6 +28,7 @@ const categoryIcons = {
 }
 
 function Opportunities({ savedOpportunityIds = [], onSaveOpportunity = () => {} }) {
+  const { opportunities, loading, error, retry } = useOpportunities()
   const [searchInput, setSearchInput] = useState('')
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({})
@@ -39,11 +40,11 @@ function Opportunities({ savedOpportunityIds = [], onSaveOpportunity = () => {} 
 
   const results = useMemo(() => {
     const relevant = activeCategory === 'All'
-      ? demoOpportunities
-      : demoOpportunities.filter((opportunity) => opportunity.category === activeCategory)
+      ? opportunities
+      : opportunities.filter((opportunity) => opportunity.category === activeCategory)
 
     return filterAndSortOpportunities(relevant, query, filters, sort)
-  }, [activeCategory, filters, query, sort])
+  }, [opportunities, activeCategory, filters, query, sort])
 
   const totalPages = Math.ceil(results.length / OPPORTUNITIES_PER_PAGE)
   const currentPage = Math.min(page, Math.max(1, totalPages || 1))
@@ -127,8 +128,10 @@ function Opportunities({ savedOpportunityIds = [], onSaveOpportunity = () => {} 
             <div>
               <h2 id="opportunities-results-title" tabIndex={-1} ref={resultsHeading}>Latest Opportunities</h2>
               <p role="status">
-                {results.length} {results.length === 1 ? 'result' : 'results'}{query && ` for "${query}"`}
-                {results.length > 0 && ` | Showing ${startIndex + 1}-${startIndex + visibleOpportunities.length}`}
+                {loading ? 'Loading opportunities...' : error ? 'Opportunities could not be loaded.' : <>
+                  {results.length} {results.length === 1 ? 'result' : 'results'}{query && ` for "${query}"`}
+                  {results.length > 0 && ` | Showing ${startIndex + 1}-${startIndex + visibleOpportunities.length}`}
+                </>}
               </p>
             </div>
             <div className="opportunities-field">
@@ -141,7 +144,9 @@ function Opportunities({ savedOpportunityIds = [], onSaveOpportunity = () => {} 
             </div>
           </div>
 
-          <section className="opportunities-results" aria-labelledby="opportunities-results-title">
+          <section className="opportunities-results" aria-labelledby="opportunities-results-title" aria-busy={loading}>
+            {loading && <div className="opportunities-empty" role="status"><p>Loading opportunities...</p></div>}
+            {error && <div className="opportunities-empty" role="alert"><h3>Unable to load opportunities</h3><p>{error}</p><button className="home-button home-button-primary" type="button" onClick={retry}>Try again</button></div>}
             <div className="opportunities-list">
               {visibleOpportunities.map((opportunity) => (
                 <OpportunityCard
@@ -160,7 +165,7 @@ function Opportunities({ savedOpportunityIds = [], onSaveOpportunity = () => {} 
               ))}
             </div>
 
-            {results.length === 0 && (
+            {!loading && !error && results.length === 0 && (
               <div className="opportunities-empty">
                 <Search size={32} aria-hidden="true" />
                 <h3>No opportunities found</h3>
@@ -189,12 +194,12 @@ function Opportunities({ savedOpportunityIds = [], onSaveOpportunity = () => {} 
               <Link className="opportunities-view-all" to="/opportunities" aria-label="View all opportunities">View all <ArrowRight size={14} aria-hidden="true" /></Link>
             </div>
             <ul className="opportunities-featured-list">
-              {demoOpportunities.slice(0, 3).map((opportunity) => (
+              {opportunities.slice(0, 3).map((opportunity) => (
                 <li key={opportunity.id}>
                   <Building2 size={18} aria-hidden="true" />
                   <div>
                     <Link to={opportunity.applyUrl}>{opportunity.title}</Link>
-                    <p>{opportunity.category} / Demo</p>
+                    <p>{opportunity.category}{opportunity.isDemo && ' / Demo'}</p>
                     <p>{opportunity.location}</p>
                   </div>
                   <ArrowRight size={14} aria-hidden="true" />

@@ -4,13 +4,15 @@ import { ArrowRight, Building2, Search, SlidersHorizontal, Mail } from 'lucide-r
 import OpportunityCard from '../components/OpportunityCard.jsx'
 import ArticleCard from '../components/ArticleCard.jsx'
 import Pagination from '../components/Pagination.jsx'
-import { jobs, jobArticles, jobFilterFields, filterAndSortJobs } from '../data/jobs.js'
+import { jobArticles, jobFilterFields, filterAndSortJobs } from '../data/jobs.js'
+import useJobs from '../hooks/useJobs.js'
 import '../styles/home.css'
 import '../styles/jobs.css'
 
 const JOBS_PER_PAGE = 9
 
 function Jobs({ savedJobIds, onSaveJob }) {
+  const { jobs, loading, error, retry } = useJobs()
   const [searchInput, setSearchInput] = useState('')
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({})
@@ -55,7 +57,7 @@ function Jobs({ savedJobIds, onSaveJob }) {
             <button type="submit" className="home-button home-button-primary"><Search size={18} aria-hidden="true" />Search</button>
           </div>
         </form>
-        <p className="jobs-note">Demo listings only: organizations, salaries and opportunities are fictional. Remote roles are based in the African location shown. Saved jobs last until you reload.</p>
+        <p className="jobs-note">Remote roles are based in the African location shown. Saved jobs last until you reload.</p>
       </section>
 
       <div className="jobs-layout" aria-label="Jobs layout">
@@ -87,8 +89,10 @@ function Jobs({ savedJobIds, onSaveJob }) {
             <div>
               <h2 id="jobs-results-title" tabIndex={-1} ref={resultsHeading}>Latest Jobs</h2>
               <p role="status">
-                {results.length} {results.length === 1 ? 'result' : 'results'}{query && ` for "${query}"`}
-                {results.length > 0 && ` | Showing ${startIndex + 1}-${startIndex + visibleJobs.length}`}
+                {loading ? 'Loading jobs...' : error ? 'Jobs could not be loaded.' : <>
+                  {results.length} {results.length === 1 ? 'result' : 'results'}{query && ` for "${query}"`}
+                  {results.length > 0 && ` | Showing ${startIndex + 1}-${startIndex + visibleJobs.length}`}
+                </>}
               </p>
             </div>
             <div className="jobs-field">
@@ -101,14 +105,16 @@ function Jobs({ savedJobIds, onSaveJob }) {
             </div>
           </div>
 
-          <section className="jobs-results" aria-labelledby="jobs-results-title">
+          <section className="jobs-results" aria-labelledby="jobs-results-title" aria-busy={loading}>
+            {loading && <div className="jobs-empty" role="status"><p>Loading jobs...</p></div>}
+            {error && <div className="jobs-empty" role="alert"><h3>Unable to load jobs</h3><p>{error}</p><button className="home-button home-button-primary" type="button" onClick={retry}>Try again</button></div>}
             <div className="jobs-list">
               {visibleJobs.map((job) => (
                 <OpportunityCard key={job.id} {...job} compact category={job.jobType}
                   to={`/jobs/${job.slug}`} cta="View Job" saved={savedJobIds.includes(job.id)} onSave={() => onSaveJob(job.id)} />
               ))}
             </div>
-            {results.length === 0 && (
+            {!loading && !error && results.length === 0 && (
               <div className="jobs-empty">
                 <Search size={32} aria-hidden="true" />
                 <h3>No opportunities found</h3>
@@ -141,7 +147,7 @@ function Jobs({ savedJobIds, onSaveJob }) {
                   <Building2 size={18} aria-hidden="true" />
                   <div>
                     <Link to={`/jobs/${job.slug}`}>{job.title}</Link>
-                    <p>{job.jobType} / Demo</p>
+                    <p>{job.jobType}{job.isDemo && ' / Demo'}</p>
                     <p>{job.location}</p>
                   </div>
                   <ArrowRight size={14} aria-hidden="true" />

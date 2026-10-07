@@ -8,6 +8,7 @@ import CategoryCard from '../components/CategoryCard.jsx'
 import OpportunityCard from '../components/OpportunityCard.jsx'
 import ArticleCard from '../components/ArticleCard.jsx'
 import '../styles/home.css'
+import '../styles/public.css'
 
 const categories = [
   { name: 'Jobs', description: 'Take your next career step.', icon: BriefcaseBusiness, to: '/jobs' },
@@ -75,7 +76,7 @@ function Home() {
       <section className="home-section" aria-labelledby="home-opportunities-title">
         <div className="home-section-heading home-section-heading-row">
           <div>
-            <h2 id="home-opportunities-title">Latest Opportunities</h2>
+            <h2 id="home-opportunities-title">Opportunity Highlights</h2>
             <p>Sample listings for this preview. These are not open applications.</p>
           </div>
           <Link className="home-text-link" to="/opportunities">Explore opportunities <ArrowRight size={18} aria-hidden="true" /></Link>
@@ -89,7 +90,7 @@ function Home() {
 
       <section className="home-section" aria-labelledby="home-articles-title">
         <div className="home-section-heading">
-          <h2 id="home-articles-title">Latest Articles</h2>
+          <h2 id="home-articles-title">Career & Study Guides</h2>
           <p>A preview of the practical guides and useful updates to come. Sample content only.</p>
         </div>
         <div className="home-card-grid">
