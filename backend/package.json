@@ -8,8 +8,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "check": "node --check src/server.js && node --check src/app.js && node --check src/config/env.js && node --check src/config/database.js && node --check src/middleware/error-handler.js && node --check src/models/Job.js && node --check src/models/Opportunity.js && node --check src/models/Scholarship.js && node --check src/routes/api.routes.js && node --check src/routes/health.routes.js && node --check src/routes/jobs.routes.js && node --check src/routes/opportunities.routes.js && node --check src/routes/scholarships.routes.js && node --check src/validation/listings.js && node --check test/validation.test.js",
-    "test": "node --test"
+    "check": "node --check src/server.js && node --check src/app.js && node --check src/config/env.js && node --check src/config/database.js && node --check src/middleware/error-handler.js && node --check src/models/Job.js && node --check src/models/Opportunity.js && node --check src/models/Scholarship.js && node --check src/routes/api.routes.js && node --check src/routes/health.routes.js && node --check src/routes/jobs.routes.js && node --check src/routes/opportunities.routes.js && node --check src/routes/scholarships.routes.js && node --check src/validation/listings.js && node --check test/validation.test.js && node --check src/models/Admin.js && node --check src/auth/passwords.js && node --check src/auth/provision.js && node --check src/auth/session.js && node --check src/auth/rate-limit.js && node --check src/routes/auth.routes.js && node --check test/auth.test.js && node --check scripts/verify-admin.js",
+    "test": "node --test",
+    "verify:admin": "node scripts/verify-admin.js"
   },
   "engines": {
     "node": ">=20"
@@ -19,6 +20,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.9.5"
   }
 }
