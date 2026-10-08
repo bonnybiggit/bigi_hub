@@ -14,6 +14,22 @@ function Header() {
     return () => media.removeEventListener('change', resize)
   }, [])
   useEffect(() => {
+    if (!mobile) return
+    const element = header.current
+    function measure() {
+      element.style.setProperty('--mobile-navigation-top', `${element.getBoundingClientRect().bottom}px`)
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    window.addEventListener('resize', measure)
+    measure()
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', measure)
+      element.style.removeProperty('--mobile-navigation-top')
+    }
+  }, [mobile])
+  useEffect(() => {
     if (!open) return
     function dismiss(event) {
       if (event.type === 'keydown' && event.key === 'Escape') { setOpen(false); toggle.current?.focus() }
