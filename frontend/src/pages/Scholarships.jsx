@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ArrowUpRight, GraduationCap, MapPin, Search, SlidersHorizontal } from 'lucide-react'
 import Pagination from '../components/Pagination.jsx'
 import useScholarships from '../hooks/useScholarships.js'
@@ -71,7 +72,7 @@ function Scholarships() {
                 {scholarship.eligibility && <div><dt>Eligibility</dt><dd>{scholarship.eligibility}</dd></div>}
                 <div><dt>Apply by</dt><dd><time dateTime={scholarship.deadline}>{new Date(scholarship.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}</time></dd></div>
               </dl>
-              <div className="scholarship-actions">{scholarship.applyUrl ? <><a className="home-button home-button-primary" href={scholarship.applyUrl} target="_blank" rel="noopener noreferrer" aria-label={'Apply / View details: ' + scholarship.title + ' (opens in a new tab)'}>Apply / View details <ArrowUpRight size={17} aria-hidden="true" /></a><p>Opens the provider?s website in a new tab.</p></> : <p>Application link not available yet.</p>}</div>
+              <div className="scholarship-actions"><Link className="home-button home-button-primary" to={`/scholarships/${scholarship.slug}`} aria-label={'View scholarship: ' + scholarship.title}>View Scholarship <ArrowUpRight size={17} aria-hidden="true" /></Link></div>
             </article>
           ))}
         </div>

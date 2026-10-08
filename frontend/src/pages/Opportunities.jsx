@@ -157,7 +157,7 @@ function Opportunities({ savedOpportunityIds = [], onSaveOpportunity = () => {} 
                   location={opportunity.location}
                   workType={opportunity.eligibility}
                   compensation={opportunity.benefit || opportunity.funding}
-                  to={opportunity.applyUrl}
+                  to={`/opportunities/${opportunity.slug}`}
                   cta="View Opportunity"
                   saved={savedOpportunityIds.includes(opportunity.id)}
                   onSave={() => onSaveOpportunity(opportunity.id)}
@@ -198,7 +198,7 @@ function Opportunities({ savedOpportunityIds = [], onSaveOpportunity = () => {} 
                 <li key={opportunity.id}>
                   <Building2 size={18} aria-hidden="true" />
                   <div>
-                    <Link to={opportunity.applyUrl}>{opportunity.title}</Link>
+                    <Link to={`/opportunities/${opportunity.slug}`}>{opportunity.title}</Link>
                     <p>{opportunity.category}{opportunity.isDemo && ' / Demo'}</p>
                     <p>{opportunity.location}</p>
                   </div>

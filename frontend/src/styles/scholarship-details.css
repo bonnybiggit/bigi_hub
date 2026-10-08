@@ -1,0 +1,21 @@
+.scholarship-details { max-width: 58rem; overflow-wrap: anywhere; }
+.scholarship-details > .scholarships-state { margin-block-start: var(--space-6); }
+.scholarship-details-note { font-size: 0.8125rem; color: var(--color-text-muted); }
+.scholarship-details-header { margin-block: var(--space-6); }
+.scholarship-details-header .home-tag { display: inline-block; }
+.scholarship-details-header h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); }
+.scholarship-details-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-block-end: var(--space-4); }
+.scholarship-details-actions .home-button { white-space: normal; text-align: center; }
+.scholarship-details-actions svg { flex-shrink: 0; }
+.scholarship-details-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); margin-block-start: var(--space-6); padding: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.scholarship-details-facts dt, .scholarship-details-application dt { font-size: 0.875rem; color: var(--color-text-muted); }
+.scholarship-details-facts dd { font-weight: 600; }
+.scholarship-details section { margin-block: var(--space-8); }
+.scholarship-details li + li { margin-block-start: var(--space-2); }
+.scholarship-details-copy { white-space: pre-wrap; }
+.scholarship-details-application { display: grid; gap: var(--space-4); }
+.scholarship-details-closed { margin-block-end: var(--space-6); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-accent-soft); color: var(--color-warning); }
+@media (max-width: 39.99rem) {
+  .scholarship-details-facts { grid-template-columns: minmax(0, 1fr); }
+  .scholarship-details-actions .home-button { width: 100%; }
+}

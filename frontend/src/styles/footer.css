@@ -1,0 +1,25 @@
+.site-footer .site-footer-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1.35fr); align-items: start; gap: var(--space-6); }
+.site-footer-content > * { min-width: 0; }
+.footer-brand p { max-width: 36ch; }
+.site-footer .footer-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: var(--space-4); }
+.site-footer h2 { margin-block-end: var(--space-2); font-size: 1rem; }
+.footer-navigation ul { list-style: none; padding: 0; margin: 0; }
+.site-footer .footer-navigation a { display: inline-flex; align-items: center; min-height: 2.75rem; padding-block: var(--space-1); }
+.footer-newsletter form { margin-block-start: var(--space-3); }
+.footer-newsletter label { display: block; font-size: 0.8125rem; font-weight: 600; margin-block-end: var(--space-2); }
+.footer-newsletter-fields { display: flex; gap: var(--space-2); }
+.footer-newsletter-fields input { flex: 1; width: 100%; min-width: 0; min-height: 2.75rem; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); background: var(--color-surface); }
+.footer-newsletter-fields input[aria-invalid='true'] { border-color: var(--color-accent); }
+.footer-newsletter-fields button { flex-shrink: 0; min-height: 2.75rem; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-accent); border-radius: var(--radius-md); background: var(--color-accent); color: var(--color-primary); font-weight: 600; cursor: pointer; }
+.footer-newsletter-fields button:hover { background: var(--color-accent-hover); }
+.site-footer .footer-newsletter-note, .site-footer .footer-newsletter-feedback { margin-block-start: var(--space-2); font-size: 0.75rem; overflow-wrap: anywhere; }
+.footer-newsletter-feedback:empty { display: none; }
+.site-footer .footer-newsletter-feedback.is-error { color: var(--color-accent-soft); font-weight: 600; }
+@media (max-width: 64rem) {
+  .site-footer .site-footer-content { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .footer-newsletter { grid-column: 1 / -1; max-width: 38rem; width: 100%; }
+}
+@media (max-width: 40rem) {
+  .site-footer .site-footer-content { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+  .footer-newsletter-fields { flex-direction: column; }
+}

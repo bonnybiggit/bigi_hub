@@ -57,6 +57,7 @@ function Header() {
           <li><NavLink to="/jobs" end>Jobs</NavLink></li>
           <li><NavLink to="/opportunities" end>Opportunities</NavLink></li>
           <li><NavLink to="/scholarships" end>Scholarships</NavLink></li>
+          <li><NavLink to="/search">Search</NavLink></li>
         </ul></div>
       </nav>
     </header>
