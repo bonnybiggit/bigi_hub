@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import Admin from '../models/Admin.js'
 import { env } from '../config/env.js'
 export const COOKIE_NAME = env.nodeEnv === 'production' ? '__Host-bigi_admin' : 'bigi_admin'
-export const cookieOptions = { httpOnly: true, secure: env.nodeEnv === 'production', sameSite: 'strict', path: '/' }
+export const cookieOptions = { httpOnly: true, secure: env.nodeEnv === 'production', sameSite: env.nodeEnv === 'production' ? 'none' : 'strict', path: '/' }
 export function issueToken(admin) {
   return jwt.sign({ version: admin.sessionVersion }, env.jwtSecret, { algorithm: 'HS256', subject: String(admin._id), issuer: 'bigi-hub-api', audience: 'bigi-hub-admin', expiresIn: '1h', jwtid: randomUUID() })
 }
