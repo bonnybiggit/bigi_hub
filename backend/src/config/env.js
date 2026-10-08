@@ -17,7 +17,10 @@ const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://l
   .map((origin) => origin.trim())
   .filter(Boolean)
 
-const adminOrigins = (process.env.ADMIN_ORIGINS ?? 'http://localhost:5174').split(',').map(origin => origin.trim()).filter(Boolean)
+const defaultAdminOrigin = process.env.NODE_ENV === 'production'
+  ? 'https://bigihubadmin.netlify.app'
+  : 'http://localhost:5174'
+const adminOrigins = (process.env.ADMIN_ORIGINS ?? defaultAdminOrigin).split(',').map(origin => origin.trim()).filter(Boolean)
 for (const origin of adminOrigins) {
   const parsed = new URL(origin)
   if (!['http:', 'https:'].includes(parsed.protocol) || parsed.origin !== origin) throw new Error('ADMIN_ORIGINS must contain exact HTTP(S) origins.')
