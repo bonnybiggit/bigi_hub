@@ -43,7 +43,8 @@ jobsRouter.get('/', async (request, response, next) => {
       }
     }
 
-    const filter = filters.length ? { $and: filters } : {}
+    // A null match includes older jobs without an archive field.
+    const filter = filters.length ? { $and: [...filters, { archivedAt: null }] } : { archivedAt: null }
     const [jobs, total] = await Promise.all([
       Job.find(filter)
         .select('-__v')

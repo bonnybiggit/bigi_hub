@@ -76,6 +76,7 @@ const jobSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  archivedAt: { type: Date, default: null },
 }, {
   timestamps: true,
   bufferTimeoutMS: DATABASE_TIMEOUT_MS,

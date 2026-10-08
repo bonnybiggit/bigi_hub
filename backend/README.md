@@ -1,8 +1,7 @@
 # Bigi_Hub Backend
 
 Node.js and Express API with MongoDB connectivity through Mongoose. This service is
-separate from the frontend; it does not connect to the frontend or include
-authentication or admin functionality.
+separate from the frontend and includes authenticated Admin Jobs management.
 
 ## Setup
 
@@ -76,3 +75,5 @@ Run npm run check and npm test. Authentication tests use a mocked database and r
 Required backend/.env variables for first provisioning and verification: MONGODB_URI (Atlas URI), ADMIN_JWT_SECRET (random, at least 32 characters), INITIAL_ADMIN_EMAIL, and INITIAL_ADMIN_PASSWORD (12–128 characters). ADMIN_ORIGINS defaults to http://localhost:5174; set the exact admin origin explicitly for deployment. NODE_ENV=production requires HTTPS admin origins. PORT and CORS_ORIGINS retain the documented defaults.
 
 Run npm run verify:admin from backend/. The command uses the existing provisioning function, confirms the stored password hash, checks that repeated provisioning preserves one account, and exercises login, /me, logout, and rejection of the revoked token against the real database. It prints only stage results. Logout revokes all sessions for the configured admin. Remove INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD after successful provisioning; they are needed only when running this provisioning verification again.
+
+See [Admin Jobs API and real MongoDB CRUD verification](ADMIN_JOBS.md).

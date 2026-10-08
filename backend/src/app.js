@@ -4,6 +4,7 @@ import helmet from 'helmet'
 import { env } from './config/env.js'
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js'
 import apiRouter from './routes/api.routes.js'
+import aiPostsRouter from './routes/ai-posts.routes.js'
 
 const app = express()
 
@@ -13,6 +14,7 @@ app.use(cors({
   origin: env.corsOrigins,
   credentials: true,
 }))
+app.use('/api/admin/ai-posts', aiPostsRouter)
 app.use(express.json({ limit: '10kb' }))
 app.use('/api', apiRouter)
 app.use(notFoundHandler)

@@ -3,6 +3,7 @@ import app from './app.js'
 import { connectDatabase } from './config/database.js'
 import { env } from './config/env.js'
 import { provisionAdmin } from './auth/provision.js'
+import { startPostExpiry } from './services/post-expiry.js'
 
 const server = app.listen(env.port, () => {
   console.info(`Bigi_Hub API listening on port ${env.port}.`)
@@ -11,11 +12,13 @@ const server = app.listen(env.port, () => {
 let isShuttingDown = false
 let retryDelay = 1000
 let retryTimer
+let stopPostExpiry
 
 async function connectWithRetry() {
   try {
     await connectDatabase()
     await provisionAdmin(env)
+    if (!stopPostExpiry) stopPostExpiry = startPostExpiry()
     retryDelay = 1000
   } catch (error) {
     console.error(`MongoDB connection failed: ${error.message}`)
@@ -32,6 +35,7 @@ connectWithRetry()
 function shutdown(signal) {
   isShuttingDown = true
   clearTimeout(retryTimer)
+  stopPostExpiry?.()
   console.info(`${signal} received; shutting down.`)
   server.close((error) => {
     if (error) {

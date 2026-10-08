@@ -41,6 +41,52 @@ h2 { font-size: 1.125rem; }
 .login-panel form { display: grid; gap: 0.75rem; margin-top: 1.5rem; }
 .login-panel input { width: 100%; min-width: 0; min-height: 44px; padding: 0.75rem; border: 1px solid #cedbd3; border-radius: 0.5rem; font: inherit; }
 .auth-button { min-height: 44px; padding: 0.75rem; border: 0; border-radius: 0.5rem; background: #e88a2e; color: #123c32; font-weight: 700; }
+/* Jobs management uses the existing admin palette and panel styles. */
+.job-filters, .job-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.job-form-grid { border: 0; padding: 0; margin: 1.25rem 0; min-width: 0; }
+.job-field { display: grid; align-content: start; gap: 0.375rem; min-width: 0; }
+.job-field label { font-size: 0.875rem; font-weight: 600; }
+.job-field :is(input, select, textarea) { width: 100%; min-width: 0; min-height: 44px; padding: 0.75rem; border: 1px solid #cedbd3; border-radius: 0.5rem; background: #fff; color: inherit; font: inherit; }
+.job-field textarea { resize: vertical; }
+.job-field [aria-invalid='true'] { border-color: #a12727; }
+.job-field-wide, .job-filters > .job-actions { grid-column: 1 / -1; }
+.job-actions, .job-row-actions, .job-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.job-actions { margin-top: 1rem; }
+.secondary-button, .danger-button { min-height: 44px; padding: 0.5rem 0.75rem; border: 1px solid #cedbd3; border-radius: 0.5rem; background: #fff; color: #123c32; }
+.danger-button { color: #a12727; border-color: #a12727; }
+.field-error { color: #a12727; font-size: 0.875rem; }
+.job-notice { padding: 0.75rem 1rem; margin-bottom: 1rem; border: 1px solid #167a5a; border-radius: 0.5rem; background: #eaf3ee; }
+.jobs-results, .job-confirmation { margin-top: 1rem; }
+.jobs-table-scroll { overflow-x: auto; margin-top: 1rem; }
+.jobs-table { border-collapse: collapse; width: 100%; text-align: left; font-size: 0.875rem; }
+.jobs-table th, .jobs-table td { padding: 0.75rem; border-bottom: 1px solid #cedbd3; vertical-align: top; }
+.jobs-table th[scope='row'] { min-width: 12rem; font-weight: 400; }
+.jobs-table :is(span, small) { display: block; }
+.jobs-table .job-row-actions { min-width: 15rem; }
+.job-pagination { justify-content: center; margin-top: 1rem; }
+@media (max-width: 48rem) { .job-filters, .job-form-grid { grid-template-columns: minmax(0, 1fr); } }
+.assistant-steps { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; margin: 0 0 1rem; list-style: none; }
+.assistant-steps li { padding: 0.375rem 0.75rem; background: #fff; border: 1px solid #cedbd3; border-radius: 0.5rem; font-size: 0.875rem; }
+.assistant-steps [aria-current='step'] { color: #123c32; background: #fcebd9; border-color: #e88a2e; font-weight: 700; }
+.assistant-note { margin: 1rem 0; }
+.assistant-review-layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1rem; }
+.assistant-sources { align-self: start; min-width: 0; }
+.assistant-sources h3 { font-size: 1rem; margin-top: 1rem; }
+.assistant-flyer { display: block; max-width: 100%; max-height: 40rem; object-fit: contain; margin-top: 1rem; }
+.assistant-source-text { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; max-height: 35rem; overflow-y: auto; }
+.assistant-facts { margin: 1rem 0; display: grid; gap: 0.75rem; }
+.assistant-facts dt { font-weight: 600; }
+.assistant-facts dd { margin: 0.25rem 0 0; white-space: pre-wrap; }
+.assistant-confirm { display: flex; gap: 0.75rem; align-items: start; }
+.assistant-confirm input { width: 1.25rem; height: 1.25rem; flex-shrink: 0; margin-top: 0.25rem; }
+.assistant-warnings { margin-bottom: 1rem; }
+.assistant-warnings summary, .assistant-sources summary { cursor: pointer; font-weight: 600; }
+.assistant-discard, .assistant-queue { margin-top: 1rem; }
+.assistant-post-list { list-style: none; margin: 1rem 0; padding: 0; }
+.assistant-post-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; border-bottom: 1px solid #cedbd3; padding-block: 1rem; }
+.assistant-post-list li > div { min-width: 0; flex: 1 1 15rem; }
+.assistant-post-list span { display: block; font-size: 0.875rem; }
+@media (max-width: 64rem) { .assistant-review-layout { grid-template-columns: minmax(0, 1fr); } }
 .header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.75rem; }
 .logout-button { min-height: 44px; padding: 0.5rem 0.75rem; border: 1px solid #f7f3ea; border-radius: 0.5rem; background: transparent; color: #fff; }
 button:disabled { cursor: wait; opacity: 0.65; }

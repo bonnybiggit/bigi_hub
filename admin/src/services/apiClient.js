@@ -9,7 +9,7 @@ export async function apiRequest(path, { method = 'GET', body, params = {}, sign
   if (!response.ok) {
     if (response.status === 401) window.dispatchEvent(new Event('admin-session-expired'))
     const data = await response.json().catch(() => null)
-    throw new ApiError(data?.message || 'API request failed. Please try again.', response.status)
+    throw new ApiError(data?.message || 'API request failed. Please try again.', response.status, data?.errors)
   }
   return response.json()
 }
