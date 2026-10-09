@@ -81,7 +81,7 @@ function Home() {
         {loading && <p role="status">Loading latest listings...</p>}
         {error && <div role="alert"><p>Some listings could not be loaded. Please try again.</p><button className="home-button home-button-secondary" type="button" onClick={() => { jobs.retry(); opportunities.retry(); scholarships.retry() }}>Try again</button></div>}
         {!loading && !error && highlights.length === 0 && <p role="status">No listings available yet. Check back soon.</p>}
-        <div className="home-card-grid" aria-busy={loading}>
+        <div className="home-card-grid home-highlight-grid" aria-busy={loading}>
           {highlights.map((opportunity) => (
             <OpportunityCard key={`${opportunity.section}-${opportunity.id}`} {...opportunity} />
           ))}

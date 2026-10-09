@@ -203,6 +203,24 @@
   margin-block-start: auto;
 }
 
+.home-highlight-grid {
+  grid-auto-rows: 1fr;
+}
+
+.home-highlight-grid .home-card-excerpt {
+  display: -webkit-box;
+  width: 100%;
+  min-block-size: 4.5em;
+  max-block-size: 4.5em;
+  flex-shrink: 0;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
 .home-card-excerpt {
   margin-block-end: var(--space-6);
   color: var(--color-text-muted);
