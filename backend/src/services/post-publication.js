@@ -2,10 +2,13 @@ import mongoose from 'mongoose'
 import Job from '../models/Job.js'
 import Scholarship from '../models/Scholarship.js'
 import Opportunity from '../models/Opportunity.js'
+import SportsArticle from '../models/SportsArticle.js'
+import NewsArticle from '../models/NewsArticle.js'
 import AssistantPost from '../models/AssistantPost.js'
 import { inputError, validateDestination } from '../validation/ai-posts.js'
+import { applicationUrlValidation } from '../validation/listings.js'
 import { expiryDate } from './post-expiry.js'
-import { publicCategory } from '../config/content-categories.js'
+import { publicCategory, NEWS_CATEGORY_IDS } from '../config/content-categories.js'
 
 const countries = [['NG', 'Nigeria'], ['GH', 'Ghana'], ['KE', 'Kenya'], ['ZA', 'South Africa'], ['RW', 'Rwanda'], ['SN', 'Senegal']]
 const missing = value => value?.trim() || 'Not specified'
@@ -31,7 +34,7 @@ export async function reopenLegacyPublication(id, revision) {
   const filter = { _id: id, revision, status: { $in: ['published', 'archived'] }, publicRecordId: null, publicationState: { $ne: 'pending' } }
   const current = await bounded(AssistantPost.findOne(filter))
   if (!current) throw conflict()
-  const existing = await Promise.all([Job, Scholarship, Opportunity].map(Model => bounded(Model.findOne({ _id: id }).select('_id'))))
+  const existing = await Promise.all([Job, Scholarship, Opportunity, SportsArticle, NewsArticle].map(Model => bounded(Model.findOne({ _id: id }).select('_id'))))
   if (existing.some(Boolean)) throw Object.assign(new Error('A public record already exists. This action cannot reset or duplicate a public publication.'), { status: 409 })
   const draft = await bounded(AssistantPost.findOneAndUpdate(filter, {
     $set: { status: 'review', destination: '', opportunityCategory: '' },
@@ -44,10 +47,24 @@ export async function reopenLegacyPublication(id, revision) {
 
 export function publicListing(post, now = new Date()) {
   validateDestination(post.destination, post.opportunityCategory)
-  const Model = { Job, Scholarship, Opportunity }[publicCategory(post.destination).model]
+  const Model = { Job, Scholarship, Opportunity, SportsArticle, NewsArticle }[publicCategory(post.destination).model]
   if (!Model) throw inputError('This destination has no publication model configured.')
   const fields = post.fields
   if (!fields.title?.trim()) throw inputError('A reviewed title is required for public publication.', { title: 'Enter the source title before approving.' })
+  const sportsSource = post.sourceMetadata?.category === 'sports' && post.sourceMetadata?.provider === 'thenewsapi'
+  if (sportsSource && Model !== SportsArticle) throw inputError('Imported sports stories must use the Sports News destination.', { destination: 'Select Sports News.' })
+  const newsSource = post.sourceMetadata?.provider === 'manual' && NEWS_CATEGORY_IDS.includes(post.sourceMetadata?.category)
+  if (newsSource && (Model !== NewsArticle || post.sourceMetadata.category !== post.destination)) throw inputError('News drafts must stay in their original news category.', { destination: 'Select the original news category.' })
+  if (Model === SportsArticle || Model === NewsArticle) {
+    const source = post.sourceMetadata
+    if (!(Model === SportsArticle ? sportsSource : newsSource) || !source.url || !applicationUrlValidation.validator(source.url) || !source.attribution?.trim() || !source.publishedAt || !Number.isFinite(new Date(source.publishedAt).getTime())) throw inputError('News publication requires the original publisher attribution, URL and date.')
+    if ((fields.description || '').length > 600) throw inputError('News stories use a short summary of at most 600 characters, not a full publisher article.', { description: 'Shorten the summary to 600 characters or fewer.' })
+    const base = fields.title.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 160).replace(/-$/g, '') || 'post'
+    return { listing: new Model({ _id: post._id, assistantPostId: post._id, status: 'published', ...(Model === NewsArticle ? { category: post.destination } : {}),
+      title: fields.title, slug: `${base}-${post._id}`, summary: fields.description || '',
+      sourceUrl: source.url, sourceName: source.attribution, sourcePublishedAt: source.publishedAt,
+      approvedAt: post.approvedAt || now, publishedAt: now }), expiresAt: null }
+  }
   // No default country: use only an explicit supported name/code in reviewed location.
   const matching = countries.filter(([code, name]) => new RegExp(`\\b(?:${code}|${name})\\b`, 'i').test(fields.location || ''))
   if (matching.length !== 1) throw inputError('Public listings require one supported country in the reviewed location (Nigeria/NG, Ghana/GH, Kenya/KE, South Africa/ZA, Rwanda/RW or Senegal/SN). Return to editing and confirm it from the source.', { location: 'Include one supported country name or code from the source.' })
@@ -81,7 +98,7 @@ export function publicListing(post, now = new Date()) {
 const bounded = query => query.maxTimeMS(3000).setOptions({ timeoutMS: 5000 })
 const conflict = () => Object.assign(new Error('The post changed or was already published. Reload it before continuing.'), { status: 409 })
 function publicationFields(current, listing, expiresAt, now) {
-  const completedAt = new Date(), expired = expiresAt <= completedAt
+  const completedAt = new Date(), expired = Boolean(expiresAt && expiresAt <= completedAt)
   return { status: expired ? 'archived' : 'published', publishedBy: current.publishedBy,
     publishedAt: now, expiresAt, publicRecordId: listing._id, publicSlug: listing.slug,
     publicationState: 'complete', ...(expired ? { archivedAt: completedAt } : {}) }

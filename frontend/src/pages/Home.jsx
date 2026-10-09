@@ -5,7 +5,7 @@ import {
   ArrowRight, BriefcaseBusiness, GraduationCap, Mail, Users,
 } from 'lucide-react'
 import CategoryCard from '../components/CategoryCard.jsx'
-import OpportunityCard from '../components/OpportunityCard.jsx'
+import HomeHighlightCard from '../components/HomeHighlightCard.jsx'
 import ArticleCard from '../components/ArticleCard.jsx'
 import useJobs from '../hooks/useJobs.js'
 import useOpportunities from '../hooks/useOpportunities.js'
@@ -83,7 +83,7 @@ function Home() {
         {!loading && !error && highlights.length === 0 && <p role="status">No listings available yet. Check back soon.</p>}
         <div className="home-card-grid home-highlight-grid" aria-busy={loading}>
           {highlights.map((opportunity) => (
-            <OpportunityCard key={`${opportunity.section}-${opportunity.id}`} {...opportunity} />
+            <HomeHighlightCard key={`${opportunity.section}-${opportunity.id}`} {...opportunity} />
           ))}
         </div>
       </section>

@@ -1,8 +1,11 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { PUBLIC_CATEGORIES } from '../config/contentCategories.js'
 
 const ORIGIN = 'https://bigihub.netlify.app'
 const pages = {
+  ...Object.fromEntries(PUBLIC_CATEGORIES.filter(item => item.model === 'NewsArticle').map(item => [`/${item.slug}`, [`${item.label} | Bigi_Hub`, item.description]])),
+  '/sports': ['Sports News | Bigi_Hub', 'Catch up on sports headlines, short summaries and links to original publishers on Bigi_Hub.'],
   '/': ['Bigi_Hub | Jobs, Opportunities & Scholarships', 'Discover jobs, scholarships, grants, fellowships and other opportunities across Nigeria and Africa. Find your next step with Bigi_Hub.'],
   '/jobs': ['Jobs in Nigeria & Africa | Bigi_Hub', 'Explore jobs and internships across Nigeria and Africa. Search by location, job type, work type and experience, and view application details.'],
   '/opportunities': ['Opportunities in Nigeria & Africa | Bigi_Hub', 'Discover grants, fellowships, internships, training, competitions and other opportunities across Nigeria and Africa. Explore eligibility and deadlines.'],
@@ -40,7 +43,7 @@ export default function Seo({ title, description, noindex = false, breadcrumbs }
 
 export function RouteSeo() {
   const { pathname, search } = useLocation()
-  if (/^\/(jobs|opportunities|scholarships)\/[^/]+\/?$/.test(pathname)) return null
+  if (PUBLIC_CATEGORIES.some(item => pathname.startsWith(`/${item.slug}/`) && /^\/[^/]+\/[^/]+\/?$/.test(pathname))) return null
   const page = pages[pathname]
   const query = new URLSearchParams(search).get('q')?.trim()
   return <Seo title={pathname === '/search' && query ? `Search: ${query.slice(0, 80)} | Bigi_Hub` : page?.[0] || 'Page not found | Bigi_Hub'} description={page?.[1] || 'This page is unavailable. Explore jobs, opportunities and scholarships on Bigi_Hub.'} noindex={!page || pathname === '/search'} />

@@ -8,6 +8,10 @@ import AssistantPost from '../src/models/AssistantPost.js'
 import Job from '../src/models/Job.js'
 import Scholarship from '../src/models/Scholarship.js'
 import Opportunity from '../src/models/Opportunity.js'
+import SportsArticle from '../src/models/SportsArticle.js'
+import NewsArticle from '../src/models/NewsArticle.js'
+import { NEWS_CATEGORY_IDS } from '../src/config/content-categories.js'
+import { validateNewsDraft } from '../src/validation/news-drafts.js'
 import { POST_FIELDS } from '../src/validation/ai-posts.js'
 import { expiryDate } from '../src/services/post-expiry.js'
 
@@ -27,7 +31,8 @@ function matches(value, filter) {
   return Object.entries(filter).every(([key, wanted]) => {
     if (key === '$and') return wanted.every(child => matches(value, child))
     if (key === '$or') return wanted.some(child => matches(value, child))
-    const actual = value[key]
+    const actual = key.split('.').reduce((current, part) => current?.[part], value)
+    if (wanted?.$exists !== undefined && (actual !== undefined) !== wanted.$exists) return false
     if (wanted === null) return actual == null
     if (wanted && Object.hasOwn(wanted, '$ne')) return String(actual) !== String(wanted.$ne)
     if (wanted?.$in) return wanted.$in.includes(actual)
@@ -37,7 +42,13 @@ function matches(value, filter) {
   })
 }
 function query(value) {
-  return { select() { return this }, sort() { return this }, skip() { return this }, limit() { return this }, lean() { return this },
+  return { select(fields) {
+    if (fields && !/^[+-]/.test(fields)) {
+      const project = record => record && Object.fromEntries(['_id', ...fields.split(' ')].filter(key => record[key] !== undefined).map(key => [key, record[key]]))
+      value = Array.isArray(value) ? value.map(project) : project(value)
+    }
+    return this
+  }, sort() { return this }, skip() { return this }, limit() { return this }, lean() { return this },
     maxTimeMS() { return this }, setOptions() { return this }, exec: async () => value,
     then(resolve, reject) { return Promise.resolve(value).then(resolve, reject) } }
 }
@@ -55,8 +66,11 @@ async function harness(t) {
   const drafts = new Map(), records = new Map(), session = { testSession: true }
   let failSave = false, loseClaim = false, standalone = false, failActivation = false
   t.mock.method(Admin, 'findById', () => query(admin))
+  t.mock.method(AssistantPost.prototype, 'save', async function() { await this.validate(); drafts.set(String(this._id), this); return this })
   t.mock.method(AssistantPost, 'updateMany', async () => ({ modifiedCount: 0 }))
   t.mock.method(AssistantPost, 'findOne', filter => query([...drafts.values()].find(post => matches(post, filter)) || null))
+  t.mock.method(AssistantPost, 'find', filter => query([...drafts.values()].filter(post => matches(post, filter))))
+  t.mock.method(AssistantPost, 'countDocuments', filter => query([...drafts.values()].filter(post => matches(post, filter)).length))
   t.mock.method(AssistantPost, 'findOneAndUpdate', (filter, update, options) => {
     if (options.session) assert.equal(options.session, session); assert.equal(options.runValidators, true)
     const post = [...drafts.values()].find(value => matches(value, filter))
@@ -76,7 +90,7 @@ async function harness(t) {
       throw error
     }
   })
-  for (const Model of [Job, Scholarship, Opportunity]) {
+  for (const Model of [Job, Scholarship, Opportunity, SportsArticle, NewsArticle]) {
     records.set(Model.modelName, new Map())
     t.mock.method(Model.prototype, 'save', async function(options) {
       assert.equal(options.session, session)
@@ -112,11 +126,134 @@ async function harness(t) {
     method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5174', Cookie: COOKIE_NAME + '=' + issueToken(admin) },
     body: JSON.stringify({ revision: post.revision, confirmed }),
   })
-  return { drafts, records, publish, add, reopen: post => fetch(`${base}/admin/ai-posts/${post._id}/reopen`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5174', Cookie: COOKIE_NAME + '=' + issueToken(admin) }, body: JSON.stringify({ revision: post.revision, confirmed: true }) }), edit: (post, body) => fetch(`${base}/admin/ai-posts/${post._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5174', Cookie: COOKIE_NAME + '=' + issueToken(admin) }, body: JSON.stringify(body) }), remove: (post, body = { revision: post.revision, confirmed: true, scope: 'assistant-only' }, options = {}) => fetch(`${base}/admin/ai-posts/${post._id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', Origin: options.origin || 'http://localhost:5174', ...(options.guest ? {} : { Cookie: COOKIE_NAME + '=' + issueToken(admin) }) }, body: JSON.stringify(body) }), detail: (resource, slug) => fetch(`${base}/${resource}/${slug}`), list: resource => fetch(`${base}/${resource}`),
-    publicList: (resource, origin = 'https://bigihub.netlify.app') => fetch(`${base}/${resource}`, { headers: { Origin: origin } }),
+  return { drafts, records, publish, add, reopen: post => fetch(`${base}/admin/ai-posts/${post._id}/reopen`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5174', Cookie: COOKIE_NAME + '=' + issueToken(admin) }, body: JSON.stringify({ revision: post.revision, confirmed: true }) }), edit: (post, body) => fetch(`${base}/admin/ai-posts/${post._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5174', Cookie: COOKIE_NAME + '=' + issueToken(admin) }, body: JSON.stringify(body) }), remove: (post, body = { revision: post.revision, confirmed: true, scope: 'assistant-only' }, options = {}) => fetch(`${base}/admin/ai-posts/${post._id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', Origin: options.origin || 'http://localhost:5174', ...(options.guest ? {} : { Cookie: COOKIE_NAME + '=' + issueToken(admin) }) }, body: JSON.stringify(body) }), detail: (resource, slug) => fetch(`${base}/${resource === 'health' ? 'health-news' : resource}/${slug}`), list: resource => fetch(`${base}/${resource === 'health' ? 'health-news' : resource}`),
+    publicList: (resource, origin = 'https://bigihub.netlify.app') => fetch(`${base}/${resource === 'health' ? 'health-news' : resource}`, { headers: { Origin: origin } }),
     publicDetail: (resource, slug) => fetch(`${base}/${resource}/${slug}`, { headers: { Origin: 'https://bigihub.netlify.app' } }),
+    queue: params => fetch(`${base}/admin/ai-posts?${params}`, { headers: { Cookie: COOKIE_NAME + '=' + issueToken(admin) } }),
+    createNews: (body, options = {}) => fetch(`${base}/admin/ai-posts/news-drafts`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: options.origin || 'http://localhost:5174', ...(options.guest ? {} : { Cookie: COOKIE_NAME + '=' + issueToken(admin) }) }, body: JSON.stringify(body) }),
+    healthCheck: () => fetch(`${base}/health`),
     approve, standalone: () => { standalone = true }, failActivation: () => { failActivation = true }, recover: () => { failSave = false; failActivation = false }, failWrite: () => { failSave = true }, loseClaim: () => { loseClaim = true } }
 }
+
+const newsInput = category => ({ category, title: 'Reviewed news headline', summary: 'Short original summary.', sourceName: 'Original Publisher', sourceUrl: 'https://publisher.example/story', sourcePublishedAt: '2026-10-09' })
+test('news APIs hide unapproved, archived and staged articles without replacing the health check', async t => {
+  const h = await harness(t), bucket = h.records.get('NewsArticle')
+  for (const category of NEWS_CATEGORY_IDS) {
+    for (const fields of [{ status: 'published', approvedAt: undefined }, { status: 'archived' }, { publicationPending: true }, { publishedAt: undefined }]) {
+      const id = String(new mongoose.Types.ObjectId()), slug = `hidden-${id}`
+      bucket.set(id, { _id: id, slug, category, status: 'published', approvedAt: new Date(), publishedAt: new Date(), ...fields })
+      assert.equal((await h.detail(category, slug)).status, 404)
+    }
+    assert.equal((await (await h.list(category)).json()).data.length, 0)
+  }
+  const health = await (await h.healthCheck()).json()
+  assert.equal(health.service, 'bigi-hub-api'); assert.equal(health.database, 'disconnected')
+})
+test('news draft input rejects unsupported categories, full article copies and forged approval', () => {
+  assert.deepEqual(validateNewsDraft(newsInput('health')), newsInput('health'))
+  for (const changes of [{ category: 'sports' }, { category: 'finance' }, { title: '' }, { summary: 'x'.repeat(601) }, { sourceUrl: 'javascript:alert(1)' }, { sourceName: '' }, { sourcePublishedAt: '2026-02-30' }, { status: 'published' }, { imageUrl: 'https://example.com/image' }]) assert.throws(() => validateNewsDraft({ ...newsInput('news'), ...changes }), error => error.status === 400)
+})
+for (const category of NEWS_CATEGORY_IDS) test(`${category}: protected manual draft, review, approval and isolated public publication`, async t => {
+  const h = await harness(t), input = newsInput(category)
+  assert.equal((await h.createNews(input, { guest: true })).status, 401)
+  assert.equal((await h.createNews(input, { origin: 'https://attacker.example' })).status, 403)
+  assert.equal((await h.createNews({ ...input, status: 'published' })).status, 400)
+  const response = await h.createNews(input); assert.equal(response.status, 201)
+  const created = (await response.json()).data, post = h.drafts.get(String(created._id))
+  assert.equal(post.status, 'review'); assert.equal(post.sourceMetadata.provider, 'manual'); assert.equal(post.destination, category)
+  assert.equal((await h.publish(post)).status, 409)
+  assert.equal((await (await h.list(category)).json()).data.length, 0)
+  assert.equal((await (await h.queue(`kind=${category}&status=review`)).json()).data.length, 1)
+  assert.equal((await h.approve(post, false)).status, 400)
+  assert.equal((await h.approve(post)).status, 200)
+  assert.equal((await (await h.list(category)).json()).data.length, 0)
+  if (category === 'technology') {
+    h.standalone(); h.failActivation(); assert.equal((await h.publish(post)).status, 503)
+    assert.equal((await (await h.list(category)).json()).data.length, 0)
+    assert.equal((await h.detail(category, post.publicSlug)).status, 404); h.recover()
+  }
+  assert.equal((await h.publish(post)).status, 200)
+  const article = (await (await h.detail(category, post.publicSlug)).json()).data
+  assert.equal(article.category, category); assert.equal(article.summary, input.summary)
+  assert.equal(article.sourceUrl, input.sourceUrl); assert.equal(article.sourceName, input.sourceName)
+  for (const field of ['sourceText', 'sourceImage', 'assistantPostId', 'approvedAt', 'description', 'deadline']) assert.equal(article[field], undefined)
+  for (const other of ['sports', ...NEWS_CATEGORY_IDS.filter(id => id !== category)]) {
+    assert.equal((await (await h.list(other)).json()).data.length, 0)
+    assert.equal((await h.detail(other, post.publicSlug)).status, 404)
+  }
+  assert.equal((await h.publish(post)).status, 409)
+  const draft = h.add(new AssistantPost({ ...post.toObject(), _id: new mongoose.Types.ObjectId(), status: 'review', publicRecordId: undefined, publicationState: undefined, destination: 'jobs' }))
+  assert.equal((await h.approve(draft)).status, 400)
+})
+
+function sportsDraft(overrides = {}) {
+  const post = draft('Other', { destination: 'sports', location: '', status: 'review', approvedAt: undefined, approvedBy: undefined,
+    sourceMetadata: { provider: 'thenewsapi', category: 'sports', externalId: 'sports-uuid', url: 'https://publisher.example/story', attribution: 'Original Publisher', publishedAt: new Date('2026-10-09') }, ...overrides })
+  post.fields.location = ''; post.fields.description = 'A short reviewed sports summary.'
+  return post
+}
+
+test('sports review and approval stay private; explicit publication creates an attributed article only', async t => {
+  const h = await harness(t), post = h.add(sportsDraft())
+  const slug = 'reviewed-title-' + post._id
+  assert.equal((await h.publish(post)).status, 409)
+  assert.equal((await h.detail('sports', slug)).status, 404)
+  assert.equal((await h.approve(post, false)).status, 400)
+  assert.equal((await h.approve(post)).status, 200)
+  assert.equal((await (await h.list('sports')).json()).data.length, 0)
+  assert.equal((await h.publish(post, { guest: true })).status, 401)
+  assert.equal((await h.publish(post, { origin: 'https://attacker.example' })).status, 403)
+  assert.equal((await h.publish(post)).status, 200)
+  const body = await (await h.detail('sports', slug)).json()
+  assert.equal(body.data.sourceUrl, post.sourceMetadata.url)
+  assert.equal(body.data.sourceName, 'Original Publisher')
+  assert.equal(body.data.summary, post.fields.description)
+  for (const field of ['sourceText', 'sourceImage', 'evidence', 'assistantPostId', 'approvedAt', 'description', 'applyUrl', 'deadline']) assert.equal(body.data[field], undefined)
+  assert.equal(post.status, 'published'); assert.equal(post.expiresAt, null)
+  assert.equal((await h.publish(post)).status, 409)
+  for (const section of ['jobs', 'opportunities', 'scholarships']) assert.equal((await (await h.list(section)).json()).data.length, 0)
+})
+
+test('sports approval rejects missing provenance, excessive summaries and opportunity routing', async t => {
+  const h = await harness(t)
+  for (const changes of [{ sourceMetadata: undefined }, { destination: 'jobs' }]) {
+    const post = h.add(sportsDraft(changes))
+    assert.equal((await h.approve(post)).status, 400)
+    assert.equal(post.status, 'review')
+  }
+  const post = h.add(sportsDraft()); post.fields.description = 'x'.repeat(601)
+  assert.equal((await h.approve(post)).status, 400)
+  assert.equal(post.status, 'review')
+})
+
+test('sports staging remains hidden and resumes after a standalone activation failure', async t => {
+  const h = await harness(t), post = h.add(sportsDraft())
+  h.standalone()
+  assert.equal((await h.approve(post)).status, 200)
+  h.failActivation(); t.mock.method(console, 'error', () => {})
+  assert.equal((await h.publish(post)).status, 503)
+  assert.equal((await (await h.list('sports')).json()).data.length, 0)
+  assert.equal((await h.detail('sports', post.publicSlug)).status, 404)
+  h.recover()
+  assert.equal((await h.publish(post)).status, 200)
+  assert.equal((await (await h.list('sports')).json()).data.length, 1)
+})
+
+test('sports public endpoints hide drafts, archived and unapproved records; queue identifies legacy sports imports', async t => {
+  const h = await harness(t), bucket = h.records.get('SportsArticle')
+  for (const [slug, overrides] of [['draft', { status: 'review' }], ['archived', { status: 'archived' }], ['unapproved', { approvedAt: null }], ['staged', { publicationPending: true }]]) {
+    bucket.set(slug, { slug, status: 'published', approvedAt: new Date(), publishedAt: new Date(), publicationPending: false, ...overrides })
+    assert.equal((await h.detail('sports', slug)).status, 404)
+  }
+  assert.equal((await (await h.list('sports')).json()).data.length, 0)
+  const imported = h.add(sportsDraft({ destination: '' })); h.add(draft())
+  const queue = await (await h.queue('kind=sports&status=review')).json()
+  assert.equal(queue.data.length, 1)
+  assert.equal(String(queue.data[0]._id), String(imported._id))
+  assert.equal(queue.data[0].sourceMetadata.category, 'sports')
+  assert.equal((await h.queue('kind=invalid')).status, 400)
+  assert.equal((await h.list('sports?status=review')).status, 400)
+})
 
 test('published records are readable from the public website origin without granting admin write access', async t => {
   const h = await harness(t)

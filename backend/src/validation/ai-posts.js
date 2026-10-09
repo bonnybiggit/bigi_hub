@@ -5,7 +5,7 @@ export { PUBLIC_DESTINATIONS, OPPORTUNITY_CATEGORIES } from '../config/content-c
 
 export const POST_TYPES = ['Job', 'Scholarship', 'Grant', 'Fellowship', 'Internship', 'Training', 'Competition', 'Event', 'Other']
 export function validateDestination(destination, opportunityCategory = '') {
-  if (!PUBLIC_DESTINATIONS.includes(destination)) throw inputError('Explicitly select Jobs, Opportunities or Scholarships before approval/publication.', { destination: 'Select a public destination.' })
+  if (!PUBLIC_DESTINATIONS.includes(destination)) throw inputError('Explicitly select a supported public destination before approval/publication.', { destination: 'Select a public destination.' })
   if (destination === 'opportunities' && !OPPORTUNITY_CATEGORIES.includes(opportunityCategory)) throw inputError('Select a supported opportunity category.', { opportunityCategory: 'Select the public opportunity category.' })
 }
 export const POST_FIELDS = { title: 500, organization: 500, location: 500, jobType: 200, workType: 200, experience: 1000, salary: 1000, description: 12000, responsibilities: 8000, requirements: 8000, howToApply: 8000, applicationEmail: 254, applicationUrl: 2000, deadline: 500 }

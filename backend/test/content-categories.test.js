@@ -5,20 +5,22 @@ import { validateDestination, POST_TYPES } from '../src/validation/ai-posts.js'
 import Job from '../src/models/Job.js'
 import Opportunity from '../src/models/Opportunity.js'
 import Scholarship from '../src/models/Scholarship.js'
+import SportsArticle from '../src/models/SportsArticle.js'
+import NewsArticle from '../src/models/NewsArticle.js'
 import AssistantPost from '../src/models/AssistantPost.js'
 
 test('category metadata preserves existing destinations, paths, models and supported fields', () => {
-  assert.deepEqual(PUBLIC_DESTINATIONS, ['jobs', 'opportunities', 'scholarships'])
+  assert.deepEqual(PUBLIC_DESTINATIONS, ['jobs', 'opportunities', 'scholarships', 'sports', 'news', 'business', 'technology', 'health'])
   assert.deepEqual(AssistantPost.schema.path('destination').enumValues, ['', ...PUBLIC_DESTINATIONS])
   assert.equal(new Set(CATEGORY_REGISTRY.map(item => item.id)).size, CATEGORY_REGISTRY.length)
   assert.equal(new Set(PUBLIC_CATEGORIES.map(item => item.slug)).size, PUBLIC_CATEGORIES.length)
-  const models = { Job, Opportunity, Scholarship }
+  const models = { Job, Opportunity, Scholarship, SportsArticle, NewsArticle }
   for (const category of PUBLIC_CATEGORIES) {
     assert.ok(Object.isFrozen(category)); assert.ok(Object.isFrozen(category.fields))
     assert.equal(publicCategory(category.id), category)
     assert.equal(listingPath(category.id), `/${category.id}`)
     assert.equal(detailPath(category.id, 'reviewed-title'), `/${category.id}/reviewed-title`)
-    assert.equal(category.apiPath, `/${category.id}`)
+    assert.equal(category.apiPath, category.id === 'health' ? '/health-news' : `/${category.id}`)
     assert.ok(models[category.model])
     for (const field of category.fields) assert.ok(models[category.model].schema.path(field), `${category.id}: ${field}`)
     validateDestination(category.id, category.id === 'opportunities' ? 'Grants' : '')

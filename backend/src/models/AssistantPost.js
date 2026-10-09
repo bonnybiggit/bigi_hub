@@ -28,8 +28,17 @@ const schema = new mongoose.Schema({
   expiresAt: Date,
   archivedAt: Date,
   aiModel: String,
+  importKey: String,
+  sourceMetadata: {
+    provider: String, externalId: String, url: String, attribution: String,
+    category: String, publishedAt: Date, fetchedAt: Date,
+  },
 }, { timestamps: true, bufferTimeoutMS: 5000 })
 // Ordinary indexes only: expired posts and their source images must never be deleted by TTL.
 schema.index({ status: 1, expiresAt: 1 })
 schema.index({ createdAt: -1 })
+schema.index({ importKey: 1 }, { unique: true, sparse: true })
+schema.index({ 'sourceMetadata.provider': 1, 'sourceMetadata.url': 1 }, {
+  unique: true, partialFilterExpression: { 'sourceMetadata.provider': 'thenewsapi' },
+})
 export default mongoose.model('AssistantPost', schema)

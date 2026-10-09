@@ -9,6 +9,8 @@ import Jobs from './pages/Jobs.jsx'
 import JobDetails from './pages/JobDetails.jsx'
 import Scholarships from './pages/Scholarships.jsx'
 import ScholarshipDetails from './pages/ScholarshipDetails.jsx'
+import Sports from './pages/Sports.jsx'
+import SportsDetails from './pages/SportsDetails.jsx'
 import NotFound from './pages/NotFound.jsx'
 import Search from './pages/Search.jsx'
 import { RouteSeo } from './components/Seo.jsx'
@@ -35,7 +37,8 @@ function App() {
             jobs: [<Jobs savedJobIds={savedJobIds} onSaveJob={toggleSavedJob} />, <JobDetails savedJobIds={savedJobIds} onSaveJob={toggleSavedJob} />],
             opportunities: [<Opportunities savedOpportunityIds={savedOpportunityIds} onSaveOpportunity={toggleSavedOpportunity} />, <OpportunityDetails savedOpportunityIds={savedOpportunityIds} onSaveOpportunity={toggleSavedOpportunity} />],
             scholarships: [<Scholarships />, <ScholarshipDetails savedScholarshipIds={savedScholarshipIds} onSaveScholarship={toggleSavedScholarship} />],
-          }[category.id]
+            sports: [<Sports />, <SportsDetails />],
+          }[category.id] || (category.model === 'NewsArticle' ? [<Sports key={category.id} category={category.id} />, <SportsDetails key={category.id} category={category.id} />] : null)
           if (!pages) throw new Error(`Missing public pages for ${category.id}`)
           return [<Route key={category.id} path={listingPath(category.id)} element={pages[0]} />, <Route key={`${category.id}-detail`} path={`${listingPath(category.id)}/:slug`} element={pages[1]} />]
         })}

@@ -1,7 +1,9 @@
-import { NAVIGATION_CATEGORIES, listingPath } from '../config/contentCategories.js'
+import { NAVIGATION_CATEGORIES, NEWS_CATEGORY_IDS, listingPath } from '../config/contentCategories.js'
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../styles/footer.css'
+const newsCategories = [...NEWS_CATEGORY_IDS, 'sports'].map(id => NAVIGATION_CATEGORIES.find(category => category.id === id)).filter(Boolean)
+const exploreCategories = NAVIGATION_CATEGORIES.filter(category => !newsCategories.includes(category))
 
 function Footer() {
   const [email, setEmail] = useState('')
@@ -20,12 +22,12 @@ function Footer() {
   return (
     <footer className="site-footer">
       <div className="site-footer-content">
-        <div className="footer-brand"><Link className="site-brand" to="/">Bigi_Hub</Link><p>Discover jobs, scholarships and opportunities across Nigeria and Africa. Take your next step.</p></div>
-        <nav className="footer-navigation" aria-label="Footer navigation">
-          <div><h2>Explore</h2><ul>{NAVIGATION_CATEGORIES.map(category => <li key={category.id}><Link to={listingPath(category.id)}>{category.label}</Link></li>)}</ul></div>
-          <div><h2>Site</h2><ul><li><Link to="/">Home</Link></li><li><Link to="/search">Search</Link></li></ul></div>
+        <div className="footer-brand"><h2>About Bigi_Hub</h2><Link className="site-brand" to="/">Bigi_Hub</Link><p>Discover jobs, scholarships and opportunities across Nigeria and Africa. Take your next step.</p></div>
+        <nav className="footer-navigation" aria-label="Explore">
+          <h2>Explore</h2><ul><li><Link to="/">Home</Link></li>{exploreCategories.map(category => <li key={category.id}><Link to={listingPath(category.id)}>{category.label}</Link></li>)}<li><Link to="/search">Search</Link></li></ul>
         </nav>
-        <section className="footer-newsletter" aria-labelledby="footer-newsletter-title"><h2 id="footer-newsletter-title">Stay in the loop</h2><p>Updates on jobs, scholarships and opportunities.</p>
+        <nav className="footer-navigation" aria-label="News and more"><h2>News &amp; More</h2><ul>{newsCategories.map(category => <li key={category.id}><Link to={listingPath(category.id)}>{category.label}</Link></li>)}</ul></nav>
+        <section className="footer-newsletter" aria-labelledby="footer-newsletter-title"><h2 id="footer-newsletter-title">Newsletter</h2><p>Updates on jobs, scholarships and opportunities.</p>
           <form noValidate onSubmit={submit}>
             <label htmlFor="footer-newsletter-email">Email address</label>
             <div className="footer-newsletter-fields"><input ref={emailInput} id="footer-newsletter-email" name="email" type="email" autoComplete="email" inputMode="email" maxLength={254} required value={email} aria-invalid={feedback?.error || undefined} aria-describedby="footer-newsletter-note footer-newsletter-feedback" onChange={event => { setEmail(event.target.value); setFeedback(null) }} placeholder="you@example.com" /><button type="submit">Join newsletter</button></div>

@@ -6,18 +6,21 @@ import Pagination from '../components/Pagination.jsx'
 import { getJobs } from '../services/jobs.service.js'
 import { getOpportunities } from '../services/opportunities.service.js'
 import { getScholarships } from '../services/scholarships.service.js'
+import { getSportsArticles } from '../services/sports.service.js'
+import { getPublicListings } from '../services/publicListings.js'
 import '../styles/home.css'
 import '../styles/search.css'
 
-const fetchers = { jobs: getJobs, opportunities: getOpportunities, scholarships: getScholarships }
+const fetchers = { jobs: getJobs, opportunities: getOpportunities, scholarships: getScholarships, sports: getSportsArticles }
 const groups = PUBLIC_CATEGORIES.map(item => {
-  if (!fetchers[item.id]) throw new Error(`Missing search service for ${item.id}`)
-  return { key: item.id, title: item.label, type: item.singular, fetch: fetchers[item.id] }
+  const fetch = fetchers[item.id] || (item.model === 'NewsArticle' ? (params, options) => getPublicListings(item.id, params, options) : null)
+  if (!fetch) throw new Error(`Missing search service for ${item.id}`)
+  return { key: item.id, title: item.label, type: item.singular, fetch }
 })
 const LIMIT = 9
 
 function SearchResults({ query, onReset }) {
-  const [pages, setPages] = useState({ jobs: 1, opportunities: 1, scholarships: 1 })
+  const [pages, setPages] = useState(Object.fromEntries(groups.map(group => [group.key, 1])))
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState(null)
   const heading = useRef(null)

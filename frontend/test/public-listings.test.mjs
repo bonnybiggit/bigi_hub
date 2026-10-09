@@ -4,6 +4,8 @@ import apiClient from '../src/services/apiClient.js'
 import { getJobs, getJobBySlug } from '../src/services/jobs.service.js'
 import { getOpportunities, getOpportunityBySlug } from '../src/services/opportunities.service.js'
 import { getScholarships, getScholarshipBySlug } from '../src/services/scholarships.service.js'
+import { getSportsArticles, getSportsArticleBySlug } from '../src/services/sports.service.js'
+import { getPublicListings, getPublicDetail } from '../src/services/publicListings.js'
 import { PRODUCTION_API_URL, resolveApiBaseUrl } from '../src/utils/apiBaseUrl.js'
 import { listingHighlights } from '../src/utils/listingHighlights.js'
 import { subscribeListingRefresh } from '../src/utils/listingRefresh.js'
@@ -25,11 +27,11 @@ test('default frontend filters retain published records with missing optional wo
 })
 
 test('public route/navigation configuration preserves the three listing and detail paths', () => {
-  assert.deepEqual(NAVIGATION_CATEGORIES.map(item => item.label), ['Jobs', 'Opportunities', 'Scholarships'])
-  assert.deepEqual(PUBLIC_CATEGORIES.map(item => listingPath(item.id)), ['/jobs', '/opportunities', '/scholarships'])
+  assert.deepEqual(NAVIGATION_CATEGORIES.map(item => item.label), ['Jobs', 'Opportunities', 'Scholarships', 'Sports News', 'News', 'Business', 'Technology', 'Health'])
+  assert.deepEqual(PUBLIC_CATEGORIES.map(item => listingPath(item.id)), ['/jobs', '/opportunities', '/scholarships', '/sports', '/news', '/business', '/technology', '/health'])
   for (const item of PUBLIC_CATEGORIES) {
     assert.equal(detailPath(item.id, 'published-title'), `/${item.slug}/published-title`)
-    assert.equal(item.apiPath, listingPath(item.id))
+    assert.equal(item.apiPath, item.id === 'health' ? '/health-news' : listingPath(item.id))
   }
   assert.throws(() => listingPath('events'), /Unsupported/)
 })
@@ -42,8 +44,9 @@ test('production configuration resolves Render with the required /api path', () 
   assert.equal(apiClient.defaults.baseURL, PRODUCTION_API_URL)
 })
 
-for (const [section, list, detail] of [['jobs', getJobs, getJobBySlug], ['opportunities', getOpportunities, getOpportunityBySlug], ['scholarships', getScholarships, getScholarshipBySlug]]) {
+for (const [section, list, detail] of [['jobs', getJobs, getJobBySlug], ['opportunities', getOpportunities, getOpportunityBySlug], ['scholarships', getScholarships, getScholarshipBySlug], ['sports', getSportsArticles, getSportsArticleBySlug], ...PUBLIC_CATEGORIES.filter(item => item.model === 'NewsArticle').map(item => [item.id, (params, options) => getPublicListings(item.id, params, options), (slug, options) => getPublicDetail(item.id, slug, options)])]) {
   test(`${section} uses real endpoint paths and response envelopes for listings and details`, async t => {
+    const apiSection = section === 'health' ? 'health-news' : section
     const record = { _id: '0123456789abcdef01234567', slug: 'published-record', title: 'Published record', deadline: '2099-01-01T00:00:00Z' }
     const pagination = { page: 1, limit: 100, total: 1, totalPages: 1 }
     const requests = []
@@ -51,15 +54,15 @@ for (const [section, list, detail] of [['jobs', getJobs, getJobBySlug], ['opport
     t.after(() => { apiClient.defaults.adapter = originalAdapter })
     apiClient.defaults.adapter = async config => {
       requests.push(config)
-      return { data: { status: 'ok', data: config.url === `/${section}` ? [record] : record, pagination }, status: 200, statusText: 'OK', headers: {}, config }
+      return { data: { status: 'ok', data: config.url === `/${apiSection}` ? [record] : record, pagination }, status: 200, statusText: 'OK', headers: {}, config }
     }
     const response = await list({ page: 1, limit: 100, search: 'Published' })
     assert.deepEqual(response.data, [record]); assert.deepEqual(response.pagination, pagination)
-    assert.equal(requests[0].url, `/${section}`)
-    assert.equal(apiClient.getUri(requests[0]), `${PRODUCTION_API_URL}/${section}?page=1&limit=100&search=Published`)
+    assert.equal(requests[0].url, `/${apiSection}`)
+    assert.equal(apiClient.getUri(requests[0]), `${PRODUCTION_API_URL}/${apiSection}?page=1&limit=100&search=Published`)
     const found = await detail(record.slug)
     assert.equal(found.id, record._id)
-    assert.equal(requests[1].url, `/${section}/${record.slug}`)
+    assert.equal(requests[1].url, `/${apiSection}/${record.slug}`)
     apiClient.defaults.adapter = async () => { throw Object.assign(new Error('Not found'), { response: { status: 404 } }) }
     assert.equal(await detail('expired-record'), null)
     apiClient.defaults.adapter = async () => { throw Object.assign(new Error('Service unavailable'), { response: { status: 503 } }) }
@@ -78,7 +81,9 @@ test('homepage highlights contain live records from all destinations with matchi
   assert.ok(cards.every(card => card.id === item._id && card.deadlineLabel && card.title === item.title))
   assert.deepEqual(listingHighlights([], [], []), [])
   const newest = { ...item, _id: 'newest', slug: 'newest', listedDate: '2026-10-10' }
-  assert.equal(listingHighlights([item, item, item, newest], [], [])[0].id, 'newest')
+  const latest = listingHighlights([item, item, item, newest], [], [])
+  assert.equal(latest.length, 3)
+  assert.equal(latest[0].id, 'newest')
 })
 
 test('listings refresh on focus and visible polling and clean up listeners', () => {

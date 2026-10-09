@@ -1,10 +1,13 @@
 import express, { Router } from 'express'
 import AssistantPost from '../models/AssistantPost.js'
+import { NEWS_CATEGORY_IDS } from '../config/content-categories.js'
+import { validateNewsDraft } from '../validation/news-drafts.js'
 import { authConfigured, requireAdmin, requireTrustedOrigin } from '../auth/session.js'
 import { validateSource, validateReview, validateRevision, validateDestination, inputError } from '../validation/ai-posts.js'
 import { validateListingQuery } from '../validation/listings.js'
 import { analyzeSource, aiConfiguration } from '../services/post-analysis.js'
 import { archiveExpiredPosts } from '../services/post-expiry.js'
+import { importSportsNews } from '../services/sports-news-import.js'
 import { publicListing, publishPublicPost, publicationCapability, reopenLegacyPublication } from '../services/post-publication.js'
 const router = Router()
 const bounded = query => query.maxTimeMS(3000).setOptions({ timeoutMS: 5000 })
@@ -40,18 +43,36 @@ router.use((error, _request, response, next) => {
 router.param('id', (_request, response, next, id) => /^[a-f\d]{24}$/i.test(id) ? next() : response.status(400).json({ status: 'error', message: 'Invalid post ID.' }))
 router.get('/configuration', safe(async (_request, response) => response.json({ status: 'ok', data: { configured: Boolean(aiConfiguration().apiKey), database: await publicationCapability() } })))
 router.get('/', safe(async (request, response) => {
-  const { page, limit } = validateListingQuery(request.query, ['status'])
+  const { page, limit } = validateListingQuery(request.query, ['status', 'kind'])
   if (request.query.search) throw Object.assign(new Error('Search is not supported for assistant posts.'), { status: 400 })
   if (request.query.status && !['review', 'approved', 'published', 'archived'].includes(request.query.status)) throw Object.assign(new Error('Invalid post status.'), { status: 400 })
   await archiveExpiredPosts()
   const filter = request.query.status ? { status: request.query.status } : {}
-  const [posts, total] = await Promise.all([bounded(AssistantPost.find(filter).select('postType destination opportunityCategory publicRecordId publicSlug publicationState fields.title status revision deadlineDate publishedAt expiresAt createdAt sourceImage.name').sort({ createdAt: -1, _id: 1 }).skip((page - 1) * limit).limit(limit)).lean(), bounded(AssistantPost.countDocuments(filter))])
+  if (request.query.kind && !['sports', ...NEWS_CATEGORY_IDS].includes(request.query.kind)) throw inputError('Invalid assistant post kind.')
+  if (NEWS_CATEGORY_IDS.includes(request.query.kind)) filter.destination = request.query.kind
+  if (request.query.kind === 'sports') filter.$or = [{ destination: 'sports' }, { 'sourceMetadata.provider': 'thenewsapi', 'sourceMetadata.category': 'sports' }]
+  const [posts, total] = await Promise.all([bounded(AssistantPost.find(filter).select('postType destination opportunityCategory publicRecordId publicSlug publicationState fields.title status revision deadlineDate publishedAt expiresAt createdAt sourceImage.name sourceMetadata').sort({ createdAt: -1, _id: 1 }).skip((page - 1) * limit).limit(limit)).lean(), bounded(AssistantPost.countDocuments(filter))])
   response.json({ status: 'ok', data: posts, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } })
+}))
+router.post('/import/sports', safe(async (request, response) => {
+  if (request.body && (typeof request.body !== 'object' || Array.isArray(request.body) || Object.keys(request.body).length)) throw inputError('Sports collection takes no request parameters.')
+  const result = await importSportsNews(request.admin._id)
+  response.json({ status: 'ok', data: result, message: 'Sports collection completed. New stories are awaiting review; nothing was approved or published.' })
 }))
 router.post('/analyze', safe(async (request, response) => {
   const source = validateSource(request.body)
   const extracted = await analyzeSource(source)
   const post = new AssistantPost({ ...extracted, extractedFields: extracted.fields, sourceText: source.text, sourceImage: source.image || undefined, createdBy: request.admin._id })
+  await post.save({ timeoutMS: 5000 })
+  response.status(201).json({ status: 'ok', data: sendPost(post) })
+}))
+router.post('/news-drafts', safe(async (request, response) => {
+  const value = validateNewsDraft(request.body)
+  const fields = { title: value.title, description: value.summary }
+  const post = new AssistantPost({ postType: 'Other', destination: value.category, fields, extractedFields: fields,
+    status: 'review', createdBy: request.admin._id, sourceText: value.summary,
+    sourceMetadata: { provider: 'manual', category: value.category, url: value.sourceUrl, attribution: value.sourceName, publishedAt: new Date(value.sourcePublishedAt) },
+    warnings: ['Manually entered news summary. Verify publisher attribution and summary reuse rights before approval.'] })
   await post.save({ timeoutMS: 5000 })
   response.status(201).json({ status: 'ok', data: sendPost(post) })
 }))

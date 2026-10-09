@@ -205,20 +205,45 @@
 
 .home-highlight-grid {
   grid-auto-rows: 1fr;
+  gap: var(--space-4);
 }
 
-.home-highlight-grid .home-card-excerpt {
+.home-highlight-card {
+  padding: var(--space-4);
+}
+
+.home-highlight-card .home-tag {
+  max-width: 100%;
+  margin-block-end: var(--space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.home-highlight-card h3 {
   display: -webkit-box;
   width: 100%;
-  min-block-size: 4.5em;
-  max-block-size: 4.5em;
-  flex-shrink: 0;
-  line-height: 1.5;
+  min-block-size: 2.8em;
+  max-block-size: 2.8em;
+  font-size: 1.125rem;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
   overflow-wrap: anywhere;
+}
+
+.home-highlight-card .home-opportunity-meta {
+  width: 100%;
+  min-block-size: 5.5em;
+  gap: var(--space-2);
+  margin-block: var(--space-2);
+}
+
+.home-highlight-card dd {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .home-card-excerpt {
