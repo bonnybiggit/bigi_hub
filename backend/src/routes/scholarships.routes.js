@@ -15,6 +15,7 @@ function getTextFilter(value) {
 
 scholarshipsRouter.get('/', async (request, response, next) => {
   try {
+    response.set('Cache-Control', 'no-store')
     const { page, limit, search } = validateListingQuery(request.query, ["country","eligibility","location","level"])
     const filters = []
 
@@ -45,7 +46,8 @@ scholarshipsRouter.get('/', async (request, response, next) => {
       }
     }
 
-    const filter = filters.length ? { $and: filters } : {}
+    const active = { deadline: { $gt: new Date() } }
+    const filter = filters.length ? { $and: [...filters, active] } : active
     const [scholarships, total] = await Promise.all([
       Scholarship.find(filter)
         .select('-__v')

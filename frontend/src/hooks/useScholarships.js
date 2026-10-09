@@ -1,9 +1,10 @@
+import useListingRefresh from './useListingRefresh.js'
 import { useEffect, useState } from 'react'
 import { getScholarships } from '../services/scholarships.service.js'
 
 export default function useScholarships(params = {}) {
   const [state, setState] = useState(null)
-  const [attempt, setAttempt] = useState(0)
+  const [attempt, refresh] = useListingRefresh()
   const requestKey = JSON.stringify([params, attempt])
   useEffect(() => {
     let active = true
@@ -28,6 +29,6 @@ export default function useScholarships(params = {}) {
     pagination: loading ? null : state.pagination,
     error: loading ? '' : state.error,
     loading,
-    retry: () => setAttempt((current) => current + 1),
+    retry: () => refresh(),
   }
 }

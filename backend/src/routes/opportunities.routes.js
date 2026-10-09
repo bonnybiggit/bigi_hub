@@ -15,6 +15,7 @@ function getTextFilter(value) {
 
 opportunitiesRouter.get('/', async (request, response, next) => {
   try {
+    response.set('Cache-Control', 'no-store')
     const { page, limit, search } = validateListingQuery(request.query, ["category","location","eligibility","countryCode"])
     const filters = []
 
@@ -46,7 +47,8 @@ opportunitiesRouter.get('/', async (request, response, next) => {
       }
     }
 
-    const filter = filters.length ? { $and: filters } : {}
+    const active = { deadline: { $gt: new Date() } }
+    const filter = filters.length ? { $and: [...filters, active] } : active
     const [opportunities, total] = await Promise.all([
       Opportunity.find(filter)
         .select('-__v')

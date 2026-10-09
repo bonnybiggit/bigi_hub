@@ -127,5 +127,6 @@ test('public jobs excludes archived records, including legacy records without ar
   t.after(() => new Promise(resolve => server.close(resolve)))
   const response = await fetch(`http://127.0.0.1:${server.address().port}/api/jobs`)
   assert.equal(response.status, 200)
-  assert.deepEqual(filter, { archivedAt: null })
+  assert.equal(filter.archivedAt, null)
+  assert.ok(filter.deadline.$gt instanceof Date)
 })

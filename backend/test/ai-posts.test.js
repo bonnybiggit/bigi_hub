@@ -1,3 +1,6 @@
+import mongoose from 'mongoose'
+import Job from '../src/models/Job.js'
+import Opportunity from '../src/models/Opportunity.js'
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
 import { once } from 'node:events'
@@ -240,6 +243,8 @@ test('analyze → review/edit → approve → publish is revision-protected and 
   const oldKey = process.env.GEMINI_API_KEY; process.env.GEMINI_API_KEY = 'test-only-key'
   t.after(() => { if (oldKey === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = oldKey })
   const send = await serve(t), nativeFetch = globalThis.fetch
+  t.mock.method(mongoose.connection, 'transaction', async action => action({}))
+  t.mock.method(Opportunity.prototype, 'save', async function() { return this })
   const extracted = result(); extracted.fields.title = { value: 'Engineer', evidence: 'Job vacancy: Engineer' }
   t.mock.method(globalThis, 'fetch', (url, options) => String(url).startsWith('https://generativelanguage.googleapis.com/') ? Promise.resolve(new Response(JSON.stringify(output(extracted)))) : nativeFetch(url, options))
   const posts = new Map()
@@ -263,7 +268,7 @@ test('analyze → review/edit → approve → publish is revision-protected and 
   const path = '/' + post._id
   assert.equal((await send(path + '/publish', 'POST', { revision: post.revision })).status, 409)
   assert.equal((await send(path + '/approve', 'POST', { revision: post.revision })).status, 400)
-  const reviewBody = { revision: post.revision, postType: 'Internship', fields: { ...post.fields, title: 'Reviewed title' }, deadlineDate: '' }
+  const reviewBody = { revision: post.revision, postType: 'Internship', fields: { ...post.fields, title: 'Reviewed title', location: 'Lagos, Nigeria' }, deadlineDate: '' }
   const saved = await send(path, 'PATCH', reviewBody); assert.equal(saved.status, 200); post = (await saved.json()).data
   assert.equal(post.status, 'review'); assert.equal(post.extractedFields.title, 'Engineer'); assert.equal(post.sourceImage.dataUrl, image.dataUrl)
   assert.equal((await send(path, 'PATCH', reviewBody)).status, 409)
@@ -283,7 +288,9 @@ test('analyze → review/edit → approve → publish is revision-protected and 
 
 test('approval rejects unresolved deadlines; publishing a past deadline immediately archives without deleting', async t => {
   const send = await serve(t)
-  const fields = { ...blankFields(), deadline: 'January 31' }
+  t.mock.method(mongoose.connection, 'transaction', async action => action({}))
+  t.mock.method(Job.prototype, 'save', async function() { return this })
+  const fields = { ...blankFields(), title: 'Original title', location: 'Nigeria', deadline: 'January 31' }
   const post = new AssistantPost({ postType: 'Job', fields, extractedFields: fields, createdBy: admin._id, sourceText: 'Original source retained', status: 'review' })
   t.mock.method(AssistantPost, 'findOne', () => query(post))
   t.mock.method(AssistantPost, 'findOneAndUpdate', (_filter, update) => { post.set(update.$set); post.revision++; return query(post) })

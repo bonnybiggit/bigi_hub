@@ -4,7 +4,8 @@ import { authConfigured, requireAdmin, requireTrustedOrigin } from '../auth/sess
 import { validateSource, validateReview, validateRevision } from '../validation/ai-posts.js'
 import { validateListingQuery } from '../validation/listings.js'
 import { analyzeSource, aiConfiguration } from '../services/post-analysis.js'
-import { archiveExpiredPosts, expiryDate } from '../services/post-expiry.js'
+import { archiveExpiredPosts } from '../services/post-expiry.js'
+import { publishPublicPost } from '../services/post-publication.js'
 const router = Router()
 const bounded = query => query.maxTimeMS(3000).setOptions({ timeoutMS: 5000 })
 const stale = response => response.status(409).json({ status: 'error', message: 'The post changed or is no longer in this workflow step. Reload it and review again.' })
@@ -20,7 +21,7 @@ function sendPost(post) {
 }
 const safe = handler => async (request, response, next) => {
   try { await handler(request, response) } catch (error) {
-    if ([400, 502, 503].includes(error.status)) return response.status(error.status).json({ status: 'error', message: error.message, ...(error.errors ? { errors: error.errors } : {}) })
+    if ([400, 409, 502, 503].includes(error.status)) return response.status(error.status).json({ status: 'error', message: error.message, ...(error.errors ? { errors: error.errors } : {}) })
     if (error.type === 'entity.too.large') return response.status(413).json({ status: 'error', message: 'Use a flyer up to 4MB and text up to 20,000 characters.' })
     if (error.name === 'ValidationError') return response.status(400).json({ status: 'error', message: 'The post contains invalid or excessive content.' })
     next(error)
@@ -81,10 +82,7 @@ router.post('/:id/publish', safe(async (request, response) => {
   if (!current) return stale(response)
   // Approval cannot bypass validation (e.g. unresolved source dates).
   validateReview({ revision, postType: current.postType, fields: current.fields.toObject(), deadlineDate: current.deadlineDate })
-  const now = new Date(), expiresAt = expiryDate(now, current.deadlineDate)
-  const expired = expiresAt <= now
-  const post = await bounded(AssistantPost.findOneAndUpdate({ _id: request.params.id, revision, status: 'approved' }, { $set: { status: expired ? 'archived' : 'published', publishedBy: request.admin._id, publishedAt: now, expiresAt, ...(expired ? { archivedAt: now } : {}) }, $inc: { revision: 1 } }, { new: true }).select('+sourceImage.data'))
-  if (!post) return stale(response)
+  const post = await publishPublicPost(current, revision, request.admin._id)
   response.json({ status: 'ok', data: sendPost(post) })
 }))
 export default router

@@ -1,3 +1,4 @@
+import useListingRefresh from './useListingRefresh.js'
 import { useEffect, useState } from 'react'
 import { getOpportunities } from '../services/opportunities.service.js'
 
@@ -15,7 +16,7 @@ function normalizeOpportunity(opportunity) {
 
 export default function useOpportunities() {
   const [state, setState] = useState({ opportunities: [], loading: true, error: '' })
-  const [attempt, setAttempt] = useState(0)
+  const [attempt, refresh] = useListingRefresh()
 
   useEffect(() => {
     let active = true
@@ -45,7 +46,7 @@ export default function useOpportunities() {
 
   function retry() {
     setState({ opportunities: [], loading: true, error: '' })
-    setAttempt((current) => current + 1)
+    refresh()
   }
 
   return { ...state, retry }

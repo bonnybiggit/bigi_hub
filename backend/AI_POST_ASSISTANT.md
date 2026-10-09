@@ -1,6 +1,12 @@
-# AI Post Assistant foundation
+# AI Post Assistant
 
-Admin URL: `/ai-post-assistant`. All nine types (Job, Scholarship, Grant, Fellowship, Internship, Training, Competition, Event, Other) use the separate `assistantposts` MongoDB collection, as requested. Publishing records an approved assistant-managed post; there is no public frontend connection, Jobs conversion, or Opportunities/Scholarships CRUD in this foundation. Existing authentication is reused without changes.
+Admin URL: /ai-post-assistant. All nine types retain their review drafts and original sources in the assistantposts collection. Publication atomically saves Job to jobs, Scholarship to scholarships, and Grant/Fellowship/Internship/Training/Competition to opportunities (matching the existing category enums). Event and Other have no public destination and publication is rejected. Existing authentication is reused without changes.
+
+Publication requires a reviewed title and one explicit supported country in the reviewed location: Nigeria/NG, Ghana/GH, Kenya/KE, South Africa/ZA, Rwanda/RW or Senegal/SN. There is no default country. Required unknown organization/job type values use Not specified. Public description uses the reviewed description or original source text/transcription and preserves application instructions/email. The assistant ID is reused as the public record ID and appended to the title slug; unique IDs/slugs and approval revision checks prevent duplicate publication. Public schemas have no published status flag: active visibility is defined by a future deadline and (for Jobs) a null archive timestamp.
+
+MongoDB Atlas or a replica set is required for the transaction linking assistant publication to public insertion. A write failure rolls back both records. Standalone MongoDB returns a safe configuration error, never a partial publication. Previously published assistant-only records are not automatically migrated or duplicated.
+
+Public APIs return only non-expired records with no-store caching. The existing public listing hooks refetch on mount, window focus, visible-tab return and every 30 seconds while visible, preserving local search, filters and saved IDs. Public and admin deployments must point to the same backend/database for visibility.
 
 ## Workflow and provenance
 
@@ -18,7 +24,7 @@ With no deadline, expiry is **three calendar months after publication**, preserv
 
 ## API and protection
 
-All `/api/admin/ai-posts` routes use the existing active-admin cookie authentication and no-store responses. Mutations also require the existing trusted Admin Origin. The protected assistant router alone uses a 6MB JSON limit; existing Jobs request limits remain unchanged. Image size, MIME signature and base64 encoding are checked server-side. SVG, remote image URLs and arbitrary filesystem paths are not accepted. No authentication files, public frontend files or existing Jobs handlers/models/services are changed for this feature.
+All `/api/admin/ai-posts` routes use the existing active-admin cookie authentication and no-store responses. Mutations also require the existing trusted Admin Origin. The protected assistant router alone uses a 6MB JSON limit; existing Jobs request limits remain unchanged. Image size, MIME signature and base64 encoding are checked server-side. SVG, remote image URLs and arbitrary filesystem paths are not accepted. Authentication and database schemas are unchanged. Public listing query/refresh behavior is connected to the publication flow.
 
 - `GET /configuration`: whether the backend key is configured; no secret is returned.
 - `GET /`: paginated assistant records; optional status filter (review, approved, published, archived).

@@ -1,3 +1,4 @@
+import useListingRefresh from './useListingRefresh.js'
 import { useEffect, useState } from 'react'
 import { getJobs } from '../services/jobs.service.js'
 
@@ -18,7 +19,7 @@ function normalizeJob(job) {
 
 export default function useJobs() {
   const [state, setState] = useState({ jobs: [], loading: true, error: '' })
-  const [attempt, setAttempt] = useState(0)
+  const [attempt, refresh] = useListingRefresh()
 
   useEffect(() => {
     let active = true
@@ -48,7 +49,7 @@ export default function useJobs() {
 
   function retry() {
     setState({ jobs: [], loading: true, error: '' })
-    setAttempt((current) => current + 1)
+    refresh()
   }
 
   return { ...state, retry }

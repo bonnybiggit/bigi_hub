@@ -15,6 +15,7 @@ function getTextFilter(value) {
 
 jobsRouter.get('/', async (request, response, next) => {
   try {
+    response.set('Cache-Control', 'no-store')
     const { page, limit, search } = validateListingQuery(request.query, ["location","jobType","workType","experience"])
     const filters = []
 
@@ -44,7 +45,8 @@ jobsRouter.get('/', async (request, response, next) => {
     }
 
     // A null match includes older jobs without an archive field.
-    const filter = filters.length ? { $and: [...filters, { archivedAt: null }] } : { archivedAt: null }
+    const active = { archivedAt: null, deadline: { $gt: new Date() } }
+    const filter = filters.length ? { $and: [...filters, active] } : active
     const [jobs, total] = await Promise.all([
       Job.find(filter)
         .select('-__v')
