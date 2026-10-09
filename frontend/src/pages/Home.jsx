@@ -7,6 +7,7 @@ import {
 import CategoryCard from '../components/CategoryCard.jsx'
 import HomeHighlightCard from '../components/HomeHighlightCard.jsx'
 import ArticleCard from '../components/ArticleCard.jsx'
+import LatestNews from '../components/LatestNews.jsx'
 import useJobs from '../hooks/useJobs.js'
 import useOpportunities from '../hooks/useOpportunities.js'
 import useScholarships from '../hooks/useScholarships.js'
@@ -42,19 +43,31 @@ function Home() {
   return (
     <div className="home">
       <section className="home-hero" aria-labelledby="home-hero-title">
-        <p className="home-eyebrow">Discover. Learn. Move forward.</p>
-        <h1 id="home-hero-title">Your next opportunity starts here.</h1>
-        <p className="home-hero-description">
-          Bigi_Hub brings news, jobs, scholarships, grants, fellowships, internships,
-          training and other opportunities together for people in Nigeria, across Africa and beyond.
-        </p>
-        <div className="home-actions">
-          <Link className="home-button home-button-primary" to="/opportunities">
-            Explore Opportunities <ArrowRight size={18} aria-hidden="true" />
-          </Link>
-          <Link className="home-button home-button-secondary" to="/jobs">Find Jobs</Link>
+        <div className="home-hero-copy">
+          <p className="home-eyebrow">Discover. Learn. Move forward.</p>
+          <h1 id="home-hero-title">Your next opportunity starts here.</h1>
+          <p className="home-hero-description">
+            Bigi_Hub brings news, jobs, scholarships, grants, fellowships, internships,
+            training and other opportunities together for people in Nigeria, across Africa and beyond.
+          </p>
+          <div className="home-actions">
+            <Link className="home-button home-button-primary" to="/opportunities">
+              Explore Opportunities <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+            <Link className="home-button home-button-secondary" to="/jobs">Find Jobs</Link>
+          </div>
         </div>
+        <nav className="home-hero-links" aria-label="Quick links">
+          <h2>Jump straight in</h2>
+          <ul>
+            {[['Jobs', '/jobs'], ['Opportunities', '/opportunities'], ['Scholarships', '/scholarships'], ['News', listingPath('news')]].map(([label, to]) => (
+              <li key={to}><Link to={to}>{label} <ArrowRight size={18} aria-hidden="true" /></Link></li>
+            ))}
+          </ul>
+        </nav>
       </section>
+
+      <LatestNews />
 
       <section className="home-section" aria-labelledby="home-categories-title">
         <div className="home-section-heading">
