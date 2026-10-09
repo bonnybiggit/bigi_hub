@@ -30,11 +30,15 @@ All `/api/admin/ai-posts` routes use the existing active-admin cookie authentica
 
 ## Configuration and checks
 
-Set **OPENAI_API_KEY** in `backend/.env`, never in a Vite variable. **OPENAI_MODEL** defaults to `gpt-4o-mini`; use an account-accessible model that supports image inputs and strict structured outputs. Restart the backend after configuring it. No AI SDK/package is installed: native Node fetch calls the Responses API with `store: false`, strict JSON Schema and a 60-second timeout. Upload/paste analysis sends those inputs to OpenAI; the UI explains this before analysis.
+Set **GEMINI_API_KEY** privately in Render's backend environment (or locally in backend/.env), never in a Vite variable. **GEMINI_MODEL** defaults to **gemini-3.5-flash-lite**, a stable model supporting image input and structured JSON output with a free API tier. Actual model access and quotas depend on your Google AI Studio project and region. Restart/redeploy the backend after configuring it. The official **@google/genai** SDK sends text and inline base64 PNG/JPEG/WebP images using the existing JSON Schema. Original image bytes remain unchanged and are saved only after successful extraction; oversized images (over 4MB), unsupported MIME types, invalid base64 and mismatched signatures are rejected locally. Gemini rejects undecodable images with a safe input error.
+
+Each provider attempt has a 25-second timeout. SDK automatic retries are disabled; the service makes at most two attempts total. Only temporary server/network failures and rate limits with an explicit retry delay of at most two seconds are retried once. Daily/zero quota, authentication, model/input errors and unusable responses are never retried. Provider error bodies, keys and request contents are never logged or returned. Local schema validation and the existing evidence checks reject malformed or unsupported extractions. Missing facts stay empty in storage and display as **Not specified** in the existing admin review. Upload/paste analysis sends those inputs to Gemini; the UI explains this before analysis.
+
+Render setup: install backend dependencies from the updated lockfile, set GEMINI_API_KEY and GEMINI_MODEL=gemini-3.5-flash-lite, remove obsolete OPENAI_API_KEY/OPENAI_MODEL environment settings, and redeploy. Verify a real flyer and pasted text in the admin assistant, then review before approving/publishing. No credentials are included in the example environment file.
 
 Without a key, the UI shows configuration is required and analysis returns 503. Existing saved drafts can still be reviewed, approved and published. No fake AI mode exists in production. Tests inject controlled provider responses only within the test process. Live image/text analysis requires a real configured key and provider access; it cannot be verified without them.
 
-Run Admin `npm run lint` and `npm run build`; run backend `npm run check` and `npm test`. Existing Jobs tests remain included. Official API references: [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses), [image inputs](https://developers.openai.com/api/docs/guides/images-vision).
+Run Admin `npm run lint` and `npm run build`; run backend `npm run check` and `npm test`. Existing Jobs tests remain included. Official API references: [structured outputs](https://ai.google.dev/gemini-api/docs/structured-output), [image inputs](https://ai.google.dev/gemini-api/docs/image-understanding).
 
 ## Files added or changed for this feature
 

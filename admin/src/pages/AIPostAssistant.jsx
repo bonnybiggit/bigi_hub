@@ -84,7 +84,7 @@ export default function AIPostAssistant() {
     {busy && <p role="status">{busy === 'analyze' ? 'Analyzing source content…' : busy === 'image' ? 'Reading image…' : 'Saving / loading post…'}</p>}
     {!post ? <section className="panel" aria-labelledby="assistant-input-title">
       <h2 id="assistant-input-title">Upload a flyer, paste text, or use both</h2>
-      {configured === false && <p className="field-error" role="status">AI analysis is not configured. Set OPENAI_API_KEY on the backend. Existing drafts can still be reviewed.</p>}
+      {configured === false && <p className="field-error" role="status">AI analysis is not configured. Set GEMINI_API_KEY on the backend. Existing drafts can still be reviewed.</p>}
       <form onSubmit={event => { event.preventDefault(); run('analyze', async () => { if (!sourceText.trim() && !image) throw new Error('Paste text or upload a flyer first.'); choosePost((await analyzePost({ text: sourceText, image })).data); reloadQueue(1); setMessage('Analysis saved as a draft. Nothing has been published.') }) }}>
         <fieldset className="job-form-grid" disabled={Boolean(busy)}><legend className="visually-hidden">Source input</legend>
           <div className="job-field job-field-wide"><label htmlFor="assistant-flyer">Flyer image (PNG, JPEG, WebP; up to 4MB)</label><input ref={fileInput} id="assistant-flyer" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => {
