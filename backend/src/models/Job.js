@@ -4,6 +4,8 @@ import { applicationUrlValidation, slugValidation, DATABASE_TIMEOUT_MS } from '.
 const supportedCountryCodes = ['NG', 'GH', 'KE', 'ZA', 'RW', 'SN']
 
 const jobSchema = new mongoose.Schema({
+  assistantPostId: { type: mongoose.Schema.Types.ObjectId, immutable: true },
+  publicationPending: { type: Boolean, default: false },
   title: {
     type: String,
     required: true,

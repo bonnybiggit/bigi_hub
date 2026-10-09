@@ -2,6 +2,12 @@ import { createHash } from 'node:crypto'
 import { applicationUrlValidation } from './listings.js'
 
 export const POST_TYPES = ['Job', 'Scholarship', 'Grant', 'Fellowship', 'Internship', 'Training', 'Competition', 'Event', 'Other']
+export const PUBLIC_DESTINATIONS = ['jobs', 'opportunities', 'scholarships']
+export const OPPORTUNITY_CATEGORIES = ['Scholarships', 'Grants', 'Fellowships', 'Internships', 'Graduate Programs', 'Training', 'Competitions', 'Volunteering']
+export function validateDestination(destination, opportunityCategory = '') {
+  if (!PUBLIC_DESTINATIONS.includes(destination)) throw inputError('Explicitly select Jobs, Opportunities or Scholarships before approval/publication.', { destination: 'Select a public destination.' })
+  if (destination === 'opportunities' && !OPPORTUNITY_CATEGORIES.includes(opportunityCategory)) throw inputError('Select a supported opportunity category.', { opportunityCategory: 'Select the public opportunity category.' })
+}
 export const POST_FIELDS = { title: 500, organization: 500, location: 500, jobType: 200, workType: 200, experience: 1000, salary: 1000, description: 12000, responsibilities: 8000, requirements: 8000, howToApply: 8000, applicationEmail: 254, applicationUrl: 2000, deadline: 500 }
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024
 export const cleanMissing = value => value == null || /^\s*(not specified|unknown|n\/a)\s*$/i.test(value) ? '' : value.trim()
@@ -50,8 +56,11 @@ export function sourceDeadline(value) {
   return index >= 0 && validDate(result) ? result : ''
 }
 export function validateReview(body) {
-  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['revision', 'postType', 'fields', 'deadlineDate'].includes(key)) || !Number.isInteger(body.revision) || body.revision < 0) throw inputError('Provide the current draft revision and review fields.')
+  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['revision', 'postType', 'fields', 'deadlineDate', 'destination', 'opportunityCategory'].includes(key)) || !Number.isInteger(body.revision) || body.revision < 0) throw inputError('Provide the current draft revision and review fields.')
   const errors = {}, fields = {}
+  const destination = body.destination ?? '', opportunityCategory = body.opportunityCategory ?? ''
+  if (typeof destination !== 'string' || (destination !== '' && !PUBLIC_DESTINATIONS.includes(destination))) errors.destination = 'Select a supported public destination.'
+  if (typeof opportunityCategory !== 'string' || (opportunityCategory !== '' && !OPPORTUNITY_CATEGORIES.includes(opportunityCategory))) errors.opportunityCategory = 'Select a supported opportunity category.'
   if (!POST_TYPES.includes(body.postType)) errors.postType = 'Select a supported post type.'
   if (!body.fields || typeof body.fields !== 'object' || Array.isArray(body.fields) || Object.keys(body.fields).some(key => !Object.hasOwn(POST_FIELDS, key))) throw inputError('Invalid review fields.')
   for (const [key, maximum] of Object.entries(POST_FIELDS)) {
@@ -67,7 +76,7 @@ export function validateReview(body) {
   const statedDate = sourceDeadline(fields.deadline)
   if (statedDate && deadlineDate !== statedDate) errors.deadlineDate = 'The confirmed date must match the deadline stated in the source.'
   if (Object.keys(errors).length) throw inputError('Check the highlighted review fields.', errors)
-  return { fields, postType: body.postType, deadlineDate }
+  return { fields, postType: body.postType, deadlineDate, destination, opportunityCategory: destination === 'opportunities' ? opportunityCategory : '' }
 }
 export function validateRevision(body, approving = false) {
   const allowed = approving ? ['revision', 'confirmed'] : ['revision']

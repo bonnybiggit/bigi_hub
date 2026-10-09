@@ -1,11 +1,11 @@
 import express, { Router } from 'express'
 import AssistantPost from '../models/AssistantPost.js'
 import { authConfigured, requireAdmin, requireTrustedOrigin } from '../auth/session.js'
-import { validateSource, validateReview, validateRevision } from '../validation/ai-posts.js'
+import { validateSource, validateReview, validateRevision, validateDestination, inputError } from '../validation/ai-posts.js'
 import { validateListingQuery } from '../validation/listings.js'
 import { analyzeSource, aiConfiguration } from '../services/post-analysis.js'
 import { archiveExpiredPosts } from '../services/post-expiry.js'
-import { publishPublicPost } from '../services/post-publication.js'
+import { publishPublicPost, publicationCapability, reopenLegacyPublication } from '../services/post-publication.js'
 const router = Router()
 const bounded = query => query.maxTimeMS(3000).setOptions({ timeoutMS: 5000 })
 const stale = response => response.status(409).json({ status: 'error', message: 'The post changed or is no longer in this workflow step. Reload it and review again.' })
@@ -38,14 +38,14 @@ router.use((error, _request, response, next) => {
   next(error)
 })
 router.param('id', (_request, response, next, id) => /^[a-f\d]{24}$/i.test(id) ? next() : response.status(400).json({ status: 'error', message: 'Invalid post ID.' }))
-router.get('/configuration', (_request, response) => response.json({ status: 'ok', data: { configured: Boolean(aiConfiguration().apiKey) } }))
+router.get('/configuration', safe(async (_request, response) => response.json({ status: 'ok', data: { configured: Boolean(aiConfiguration().apiKey), database: await publicationCapability() } })))
 router.get('/', safe(async (request, response) => {
   const { page, limit } = validateListingQuery(request.query, ['status'])
   if (request.query.search) throw Object.assign(new Error('Search is not supported for assistant posts.'), { status: 400 })
   if (request.query.status && !['review', 'approved', 'published', 'archived'].includes(request.query.status)) throw Object.assign(new Error('Invalid post status.'), { status: 400 })
   await archiveExpiredPosts()
   const filter = request.query.status ? { status: request.query.status } : {}
-  const [posts, total] = await Promise.all([bounded(AssistantPost.find(filter).select('postType fields.title status revision deadlineDate publishedAt expiresAt createdAt sourceImage.name').sort({ createdAt: -1, _id: 1 }).skip((page - 1) * limit).limit(limit)).lean(), bounded(AssistantPost.countDocuments(filter))])
+  const [posts, total] = await Promise.all([bounded(AssistantPost.find(filter).select('postType destination opportunityCategory publicRecordId publicSlug publicationState fields.title status revision deadlineDate publishedAt expiresAt createdAt sourceImage.name').sort({ createdAt: -1, _id: 1 }).skip((page - 1) * limit).limit(limit)).lean(), bounded(AssistantPost.countDocuments(filter))])
   response.json({ status: 'ok', data: posts, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } })
 }))
 router.post('/analyze', safe(async (request, response) => {
@@ -63,7 +63,7 @@ router.get('/:id', safe(async (request, response) => {
 }))
 router.patch('/:id', safe(async (request, response) => {
   const review = validateReview(request.body)
-  const post = await bounded(AssistantPost.findOneAndUpdate({ _id: request.params.id, revision: request.body.revision, status: { $in: ['review', 'approved'] } }, { $set: { ...review, status: 'review' }, $unset: { approvedAt: 1, approvedBy: 1 }, $inc: { revision: 1 } }, { new: true, runValidators: true }).select('+sourceImage.data'))
+  const post = await bounded(AssistantPost.findOneAndUpdate({ _id: request.params.id, revision: request.body.revision, status: { $in: ['review', 'approved'] }, publicRecordId: null, publicationState: { $ne: 'pending' } }, { $set: { ...review, status: 'review' }, $unset: { approvedAt: 1, approvedBy: 1 }, $inc: { revision: 1 } }, { new: true, runValidators: true }).select('+sourceImage.data'))
   if (!post) return stale(response)
   response.json({ status: 'ok', data: sendPost(post) })
 }))
@@ -71,18 +71,34 @@ router.post('/:id/approve', safe(async (request, response) => {
   const revision = validateRevision(request.body, true)
   const current = await bounded(AssistantPost.findOne({ _id: request.params.id, revision, status: 'review' }))
   if (!current) return stale(response)
-  validateReview({ revision, postType: current.postType, fields: current.fields.toObject(), deadlineDate: current.deadlineDate })
+  validateDestination(current.destination, current.opportunityCategory)
+  validateReview({ revision, postType: current.postType, fields: current.fields.toObject(), deadlineDate: current.deadlineDate, destination: current.destination, opportunityCategory: current.opportunityCategory })
   const post = await bounded(AssistantPost.findOneAndUpdate({ _id: request.params.id, revision, status: 'review' }, { $set: { status: 'approved', approvedBy: request.admin._id, approvedAt: new Date() }, $inc: { revision: 1 } }, { new: true }).select('+sourceImage.data'))
   if (!post) return stale(response)
   response.json({ status: 'ok', data: sendPost(post) })
 }))
 router.post('/:id/publish', safe(async (request, response) => {
   const revision = validateRevision(request.body)
-  const current = await bounded(AssistantPost.findOne({ _id: request.params.id, revision, status: 'approved' }))
+  const current = await bounded(AssistantPost.findOne({ _id: request.params.id, $or: [
+    { revision, status: 'approved', publicationState: { $ne: 'pending' }, publicRecordId: null },
+    { publicationState: 'pending', $or: [{ revision }, { publicationRevision: revision }] },
+  ] }))
   if (!current) return stale(response)
   // Approval cannot bypass validation (e.g. unresolved source dates).
-  validateReview({ revision, postType: current.postType, fields: current.fields.toObject(), deadlineDate: current.deadlineDate })
+  validateReview({ revision, postType: current.postType, fields: current.fields.toObject(), deadlineDate: current.deadlineDate, destination: current.destination, opportunityCategory: current.opportunityCategory })
   const post = await publishPublicPost(current, revision, request.admin._id)
   response.json({ status: 'ok', data: sendPost(post) })
+}))
+router.post('/:id/reopen', safe(async (request, response) => {
+  const revision = validateRevision(request.body, true)
+  const post = await reopenLegacyPublication(request.params.id, revision)
+  response.json({ status: 'ok', data: sendPost(post), message: 'Assistant-only publication returned to review. Select a destination, review and approve again; the original flyer is preserved.' })
+}))
+router.delete('/:id', safe(async (request, response) => {
+  const body = request.body
+  if (!body || Object.keys(body).some(key => !['revision', 'confirmed', 'scope'].includes(key)) || !Number.isInteger(body.revision) || body.revision < 0 || body.confirmed !== true || body.scope !== 'assistant-only') throw inputError('Confirm deletion of the assistant record only. Public listings are never deleted by this action.')
+  const deleted = await bounded(AssistantPost.findOneAndDelete({ _id: request.params.id, revision: body.revision, publicationState: { $ne: 'pending' } }))
+  if (!deleted) return response.status(409).json({ status: 'error', message: 'The assistant record changed, was deleted, or has a pending publication. Reload it; resume a pending publication before deletion.' })
+  response.json({ status: 'ok', message: 'Assistant record and its source deleted. Any public listing remains unchanged.', data: { publicRecordId: deleted.publicRecordId || null, destination: deleted.destination || '' } })
 }))
 export default router

@@ -7,3 +7,10 @@ export const analyzePost = source => apiRequest(`${path}/analyze`, { method: 'PO
 export const savePostReview = (id, body) => apiRequest(`${path}/${id}`, { method: 'PATCH', body })
 export const approvePost = (id, revision) => apiRequest(`${path}/${id}/approve`, { method: 'POST', body: { revision, confirmed: true } })
 export const publishPost = (id, revision) => apiRequest(`${path}/${id}/publish`, { method: 'POST', body: { revision } })
+export const deleteAssistantPost = (id, revision) => apiRequest(`${path}/${id}`, { method: 'DELETE', body: { revision, confirmed: true, scope: 'assistant-only' } })
+export const reopenAssistantPost = (id, revision) => apiRequest(`${path}/${id}/reopen`, { method: 'POST', body: { revision, confirmed: true } })
+export async function verifyPublicPost(post) {
+  const response = await apiRequest(`${post.destination}/${encodeURIComponent(post.publicSlug)}`)
+  if (String(response.data?._id) !== String(post.publicRecordId)) throw new Error('The public record could not be verified.')
+  return response.data
+}

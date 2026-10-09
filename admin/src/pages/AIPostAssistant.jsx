@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import PageHeader from '../components/PageHeader.jsx'
 import PostSources from '../components/PostSources.jsx'
 import { usePageTitle } from '../hooks/usePageTitle.js'
-import { analyzePost, approvePost, getAIConfiguration, getAssistantPost, listAssistantPosts, publishPost, savePostReview } from '../services/aiPosts.service.js'
+import { analyzePost, approvePost, deleteAssistantPost, reopenAssistantPost, verifyPublicPost, getAIConfiguration, getAssistantPost, listAssistantPosts, publishPost, savePostReview } from '../services/aiPosts.service.js'
 import { assistantDate, assistantFields, displayFact, postStatus, postTypes, readFlyer } from '../utils/assistantPost.js'
+
+const destinations = [['jobs', 'Jobs'], ['opportunities', 'Opportunities'], ['scholarships', 'Scholarships']]
+const categories = ['Scholarships', 'Grants', 'Fellowships', 'Internships', 'Graduate Programs', 'Training', 'Competitions', 'Volunteering']
+const publicSite = (import.meta.env.VITE_PUBLIC_SITE_URL || 'https://bigihub.netlify.app').replace(/\/$/, '')
 
 export default function AIPostAssistant() {
   usePageTitle('AI Post Assistant')
@@ -45,7 +49,7 @@ export default function AIPostAssistant() {
     setQueueQuery(current => ({ page, status, revision: current.revision + 1 }))
   }
   function choosePost(value) {
-    setPost(value); setForm({ postType: value.postType, fields: { ...value.fields }, deadlineDate: value.deadlineDate || '' })
+    setPost(value); setForm({ destination: value.destination || '', opportunityCategory: value.opportunityCategory || '', postType: value.postType, fields: { ...value.fields }, deadlineDate: value.deadlineDate || '' })
     setDirty(false); setConfirmed(false); setFieldErrors({})
   }
   async function run(operation, action) {
@@ -71,8 +75,26 @@ export default function AIPostAssistant() {
   function newInput() {
     setPost(null); setForm(null); setImage(null); setSourceText(''); setError(''); setMessage(''); setFieldErrors({}); setConfirmed(false); setDirty(false)
   }
-  const readOnly = post && ['published', 'archived'].includes(post.status)
-  const approved = post?.status === 'approved' && !dirty
+  async function publishCurrent() {
+    let published
+    try { published = (await publishPost(post._id, post.revision)).data }
+    catch (failure) { try { choosePost((await getAssistantPost(post._id)).data) } catch { /* Keep the existing view if reload also fails. */ } throw failure }
+    choosePost(published); reloadQueue()
+    if (published.status === 'archived') setMessage('Publication saved and archived because its deadline has passed.')
+    else { try { await verifyPublicPost(published); setMessage('Published record verified through its public detail API.') } catch { setMessage('Publication saved. Public visibility could not yet be verified; check the public detail link or retry verification.') } }
+  }
+  async function removeAssistant(value) {
+    const publicWarning = value.publicRecordId || ['published', 'archived'].includes(value.status) ? ' Any public listing will remain published or archived; this does not remove it from the public website.' : ''
+    if (!window.confirm('Delete this assistant record and its original flyer permanently?' + publicWarning)) return
+    await run('delete', async () => {
+      const response = await deleteAssistantPost(value._id, value.revision)
+      if (post?._id === value._id) newInput()
+      reloadQueue(1); setMessage(response.message)
+    })
+  }
+  const pending = post?.publicationState === 'pending'
+  const readOnly = post && (pending || ['published', 'archived'].includes(post.status))
+  const approved = post?.status === 'approved' && !dirty && !pending
   const step = busy === 'analyze' ? 1 : !post ? 0 : readOnly ? 4 : approved ? 3 : 2
   const source = post ? { text: post.sourceText, image: post.sourceImage, imageText: post.imageText, evidence: post.evidence } : { text: sourceText, image }
   return <>
@@ -99,18 +121,25 @@ export default function AIPostAssistant() {
       </form>
       {image && <PostSources {...source} />}
     </section> : <>
-      <div className="section-heading"><h2 ref={reviewHeading} tabIndex={-1}>{readOnly ? 'Published post' : approved ? 'Approved — ready to publish' : 'Review and edit extracted content'}</h2><button className="secondary-button" disabled={Boolean(busy) || dirty} onClick={newInput}>New input</button></div>
+      <div className="section-heading"><h2 ref={reviewHeading} tabIndex={-1}>{pending ? 'Publication pending' : readOnly ? 'Published post' : approved ? 'Approved — ready to publish' : 'Review and edit extracted content'}</h2><button className="secondary-button" disabled={Boolean(busy) || dirty} onClick={newInput}>New input</button></div>
+      <div className="job-actions"><button className="secondary-button" disabled={Boolean(busy) || pending} onClick={() => removeAssistant(post)}>Delete assistant record only</button></div>
       <p className="assistant-note">Status: {postStatus(post.status)}{dirty ? ' — unsaved changes; approval must be repeated' : ''}. Original source is retained with this post.</p>
       {post.warnings?.length > 0 && <details className="panel assistant-warnings" open><summary>Review notes</summary><ul>{post.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></details>}
       <div className="assistant-review-layout"><section className="panel" aria-label="Post review">
         {readOnly || approved ? <>
           <h3>{displayFact(post.fields.title)}</h3>
-          <dl className="assistant-facts"><div><dt>Post type</dt><dd>{post.postType}</dd></div>{assistantFields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{displayFact(post.fields[key])}</dd></div>)}<div><dt>Confirmed deadline date</dt><dd>{displayFact(post.deadlineDate)}</dd></div><div><dt>Expiry</dt><dd>{post.expiresAt ? assistantDate(post.expiresAt) + ' (Africa/Lagos)' : post.deadlineDate ? post.deadlineDate + ' at end of day (Africa/Lagos)' : '3 calendar months after publishing'}</dd></div></dl>
-          <p>Jobs publish to Jobs; Scholarships to Scholarships; Grants, Fellowships, Internships, Training and Competitions to Opportunities. Event and Other have no public destination. The reviewed location must include a supported country from the source.</p>
-          {approved && <><p>{post.deadlineDate && new Date(post.deadlineDate + 'T23:59:59.999+01:00') < new Date() ? 'This deadline has passed. Publishing will immediately archive the post.' : 'Publish only after completing your source review.'}</p><div className="job-actions"><button className="secondary-button" disabled={Boolean(busy)} onClick={() => { setDirty(true); setConfirmed(false) }}>Return to editing</button><button className="auth-button" disabled={Boolean(busy)} onClick={() => run('publish', async () => { choosePost((await publishPost(post._id, post.revision)).data); reloadQueue(); setMessage('Publication saved to the public listing collection. Expired posts are archived and hidden automatically.') })}>Publish approved post</button></div></>}
+          <dl className="assistant-facts"><div><dt>Public destination</dt><dd>{displayFact(post.destination)}</dd></div><div><dt>Post type</dt><dd>{post.postType}</dd></div>{assistantFields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{displayFact(post.fields[key])}</dd></div>)}<div><dt>Confirmed deadline date</dt><dd>{displayFact(post.deadlineDate)}</dd></div><div><dt>Expiry</dt><dd>{post.expiresAt ? assistantDate(post.expiresAt) + ' (Africa/Lagos)' : post.deadlineDate ? post.deadlineDate + ' at end of day (Africa/Lagos)' : '3 calendar months after publishing'}</dd></div></dl>
+          <p>The selected destination determines the public collection, independently of AI classification. Opportunities also require an explicitly selected category. The reviewed location must include a supported country from the source.</p>
+          {approved && <><p>{post.deadlineDate && new Date(post.deadlineDate + 'T23:59:59.999+01:00') < new Date() ? 'This deadline has passed. Publishing will immediately archive the post.' : 'Publish only after completing your source review.'}</p><div className="job-actions"><button className="secondary-button" disabled={Boolean(busy)} onClick={() => { setDirty(true); setConfirmed(false) }}>Return to editing</button><button className="auth-button" disabled={Boolean(busy)} onClick={() => run('publish', publishCurrent)}>Publish approved post</button></div></>}
+          {readOnly && !pending && !post.publicRecordId && <><p>This older assistant publication has no stored public link. Return it to review to select a public destination and approve again.</p><button className="secondary-button" disabled={Boolean(busy)} onClick={() => { if (window.confirm('Return this assistant-only publication to review? Its original flyer is retained. A new review and approval will be required.')) run('reopen', async () => { const response = await reopenAssistantPost(post._id, post.revision); choosePost(response.data); reloadQueue(); setMessage(response.message) }) }}>Return assistant-only publication to review</button></>}
+          {pending && <><p role="status">Publication is pending. Its destination and record link are saved; resume to finish safely before deleting or editing.</p><button className="auth-button" disabled={Boolean(busy)} onClick={() => run('publish', publishCurrent)}>Resume publication</button></>}
+          {post.publicRecordId && <p>Public record: {post.publicRecordId}. <a href={publicSite + '/' + post.destination + '/' + post.publicSlug} target="_blank" rel="noreferrer">Open public detail page</a>. Deleting this assistant record does not remove that public listing.</p>}
+          {post.publicRecordId && !pending && post.status === 'published' && <button className="secondary-button" disabled={Boolean(busy)} onClick={() => run('verify', async () => { await verifyPublicPost(post); setMessage('Public detail API verified.') })}>Verify public record</button>}
           {readOnly && <p>{post.status === 'archived' ? 'Expired and archived. Content and original source are preserved.' : `Published ${assistantDate(post.publishedAt)} (Africa/Lagos).`}</p>}
         </> : <form onSubmit={event => { event.preventDefault(); run('save', async () => { await saveReview(); reloadQueue(); setMessage('Review saved. Approval and publishing are still separate steps.') }) }} noValidate>
           <fieldset className="job-form-grid" disabled={Boolean(busy)}><legend className="visually-hidden">Editable extracted fields</legend>
+            <div className="job-field job-field-wide"><label htmlFor="assistant-destination">Public destination (required)</label><select id="assistant-destination" name="destination" value={form.destination} onChange={event => { changeMeta(event); setForm(current => ({ ...current, opportunityCategory: '' })) }} aria-invalid={Boolean(fieldErrors.destination)}><option value="">Select Jobs, Opportunities or Scholarships</option>{destinations.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>{fieldErrors.destination && <span className="field-error">{fieldErrors.destination}</span>}</div>
+            {form.destination === 'opportunities' && <div className="job-field job-field-wide"><label htmlFor="assistant-category">Public opportunity category (required)</label><select id="assistant-category" name="opportunityCategory" value={form.opportunityCategory} onChange={changeMeta} aria-invalid={Boolean(fieldErrors.opportunityCategory)}><option value="">Select category</option>{categories.map(category => <option key={category}>{category}</option>)}</select>{fieldErrors.opportunityCategory && <span className="field-error">{fieldErrors.opportunityCategory}</span>}</div>}
             <div className="job-field job-field-wide"><label htmlFor="assistant-type">Post type</label><select id="assistant-type" name="postType" value={form.postType} onChange={changeMeta}>{postTypes.map(type => <option key={type}>{type}</option>)}</select></div>
             {assistantFields.map(([name, label, maximum, multiline]) => <div className={'job-field' + (multiline ? ' job-field-wide' : '')} key={name}>
               <label htmlFor={`assistant-${name}`}>{label}</label>
@@ -120,7 +149,7 @@ export default function AIPostAssistant() {
             <div className="job-field job-field-wide"><label htmlFor="assistant-deadline-date">Confirmed application deadline date</label><input id="assistant-deadline-date" name="deadlineDate" type="date" value={form.deadlineDate} onChange={changeMeta} aria-invalid={Boolean(fieldErrors.deadlineDate)} /><small>Only use a real source deadline. With no deadline, expiry is 3 months after publishing.</small>{fieldErrors.deadlineDate && <span className="field-error">{fieldErrors.deadlineDate}</span>}</div>
           </fieldset>
           <label className="assistant-confirm"><input type="checkbox" checked={confirmed} disabled={Boolean(busy)} onChange={event => setConfirmed(event.target.checked)} />I checked the source, classification, every available fact and deadline. I have not added unsupported information.</label>
-          <div className="job-actions"><button className="secondary-button" type="submit" disabled={Boolean(busy)}>Save review</button><button className="auth-button" type="button" disabled={!confirmed || Boolean(busy)} onClick={() => run('approve', async () => { const saved = await saveReview(); choosePost((await approvePost(saved._id, saved.revision)).data); reloadQueue(); setMessage('Post approved. Check the final review and select Publish when ready.') })}>Approve reviewed post</button></div>
+          <div className="job-actions"><button className="secondary-button" type="submit" disabled={Boolean(busy)}>Save review</button><button className="auth-button" type="button" disabled={!confirmed || !form.destination || (form.destination === 'opportunities' && !form.opportunityCategory) || Boolean(busy)} onClick={() => run('approve', async () => { const saved = await saveReview(); choosePost((await approvePost(saved._id, saved.revision)).data); reloadQueue(); setMessage('Post approved. Check the final review and select Publish when ready.') })}>Approve reviewed post</button></div>
           {dirty && <button className="secondary-button assistant-discard" type="button" disabled={Boolean(busy)} onClick={() => { choosePost(post); setMessage('Unsaved edits discarded. The saved draft and source remain available.') }}>Discard unsaved edits</button>}
         </form>}
       </section><PostSources {...source} /></div>
@@ -129,7 +158,7 @@ export default function AIPostAssistant() {
       <div className="section-heading"><h2 id="assistant-queue-title">Assistant-managed posts</h2><button className="secondary-button" disabled={Boolean(busy)} onClick={() => reloadQueue()}>Refresh posts</button></div>
       <div className="job-field"><label htmlFor="assistant-status">Filter post status</label><select id="assistant-status" value={queueQuery.status} disabled={Boolean(busy)} onChange={event => reloadQueue(1, event.target.value)}><option value="">All statuses</option>{['review', 'approved', 'published', 'archived'].map(status => <option key={status} value={status}>{postStatus(status)}</option>)}</select></div>
       {queue.loading ? <p role="status">Loading assistant posts…</p> : queue.error ? <><p className="field-error" role="alert">{queue.error}</p><button className="secondary-button" onClick={() => reloadQueue()}>Retry posts</button></> : <>
-        {!queue.data.length ? <p>No posts in this status.</p> : <ul className="assistant-post-list">{queue.data.map(item => <li key={item._id}><div><strong>{displayFact(item.fields?.title)}</strong><span>{item.postType} · {postStatus(item.status)}{item.expiresAt ? ' · Expires ' + assistantDate(item.expiresAt) : ''}</span></div><button className="secondary-button" disabled={Boolean(busy) || dirty} onClick={() => run('open', async () => choosePost((await getAssistantPost(item._id)).data))} aria-label={`Open ${displayFact(item.fields?.title)} (${item._id.slice(-6)})`}>Open post</button></li>)}</ul>}
+        {!queue.data.length ? <p>No posts in this status.</p> : <ul className="assistant-post-list">{queue.data.map(item => <li key={item._id}><div><strong>{displayFact(item.fields?.title)}</strong><span>{item.postType} · {postStatus(item.status)}{item.expiresAt ? ' · Expires ' + assistantDate(item.expiresAt) : ''}</span></div><button className="secondary-button" disabled={Boolean(busy) || dirty} onClick={() => run('open', async () => choosePost((await getAssistantPost(item._id)).data))} aria-label={`Open ${displayFact(item.fields?.title)} (${item._id.slice(-6)})`}>Open post</button><button className="secondary-button" disabled={Boolean(busy) || dirty || item.publicationState === 'pending'} onClick={() => removeAssistant(item)}>Delete assistant only</button></li>)}</ul>}
         {queue.pagination.totalPages > 1 && <nav className="job-pagination" aria-label="Assistant posts pagination"><button className="secondary-button" disabled={queueQuery.page <= 1 || Boolean(busy)} onClick={() => reloadQueue(queueQuery.page - 1)}>Previous</button><span>Page {queueQuery.page} of {queue.pagination.totalPages}</span><button className="secondary-button" disabled={queueQuery.page >= queue.pagination.totalPages || Boolean(busy)} onClick={() => reloadQueue(queueQuery.page + 1)}>Next</button></nav>}
       </>}
     </section>

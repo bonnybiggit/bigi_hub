@@ -14,6 +14,8 @@ const categories = [
 ]
 
 const opportunitySchema = new mongoose.Schema({
+  assistantPostId: { type: mongoose.Schema.Types.ObjectId, immutable: true },
+  publicationPending: { type: Boolean, default: false },
   title: {
     type: String,
     required: true,

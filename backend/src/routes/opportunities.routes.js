@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import Opportunity from '../models/Opportunity.js'
 
-import { validateListingQuery, DATABASE_MAX_TIME_MS, DATABASE_TIMEOUT_MS } from '../validation/listings.js'
+import { slugValidation, validateListingQuery, DATABASE_MAX_TIME_MS, DATABASE_TIMEOUT_MS } from '../validation/listings.js'
 
 const opportunitiesRouter = Router()
 
@@ -47,11 +47,11 @@ opportunitiesRouter.get('/', async (request, response, next) => {
       }
     }
 
-    const active = { deadline: { $gt: new Date() } }
+    const active = { publicationPending: { $ne: true }, deadline: { $gt: new Date() } }
     const filter = filters.length ? { $and: [...filters, active] } : active
     const [opportunities, total] = await Promise.all([
       Opportunity.find(filter)
-        .select('-__v')
+        .select('-__v -assistantPostId -publicationPending')
         .sort({ listedDate: -1, _id: 1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -81,6 +81,17 @@ opportunitiesRouter.get('/', async (request, response, next) => {
     }
     return next(error)
   }
+})
+
+opportunitiesRouter.get('/:slug', async (request, response, next) => {
+  try {
+    response.set('Cache-Control', 'no-store')
+    if (!slugValidation.validator(request.params.slug)) return response.status(400).json({ status: 'error', message: 'Invalid listing slug.' })
+    const filter = { slug: request.params.slug, publicationPending: { $ne: true }, deadline: { $gt: new Date() } }
+    const listing = await Opportunity.findOne(filter).select('-__v -assistantPostId -publicationPending').maxTimeMS(DATABASE_MAX_TIME_MS).setOptions({ timeoutMS: DATABASE_TIMEOUT_MS }).lean().exec()
+    if (!listing) return response.status(404).json({ status: 'error', message: 'Listing not found or expired.' })
+    response.json({ status: 'ok', data: listing })
+  } catch (error) { next(error) }
 })
 
 export default opportunitiesRouter

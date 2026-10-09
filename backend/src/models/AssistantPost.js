@@ -3,6 +3,13 @@ import { POST_TYPES, POST_FIELDS } from '../validation/ai-posts.js'
 const fieldsSchema = new mongoose.Schema(Object.fromEntries(Object.entries(POST_FIELDS).map(([key, maxlength]) => [key, { type: String, default: '', maxlength }])), { _id: false })
 const schema = new mongoose.Schema({
   postType: { type: String, enum: POST_TYPES, required: true },
+  destination: { type: String, enum: ['', 'jobs', 'opportunities', 'scholarships'], default: '' },
+  opportunityCategory: { type: String, default: '' },
+  publicRecordId: mongoose.Schema.Types.ObjectId,
+  publicSlug: String,
+  publicationState: { type: String, enum: ['pending', 'complete'] },
+  publicationRevision: Number,
+  publicationStartedAt: Date,
   fields: { type: fieldsSchema, required: true },
   extractedFields: { type: fieldsSchema, required: true },
   evidence: { type: Map, of: String, default: {} },

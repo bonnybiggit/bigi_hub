@@ -10,17 +10,15 @@ export async function getOpportunities(params = {}, { signal } = {}) {
   return response.data
 }
 
-// The public API exposes listing only; match slugs exactly across pages.
+// Detail pages use the same active-record rules as their listing API.
 export async function getOpportunityBySlug(slug, { signal } = {}) {
-  let page = 1
-  let totalPages
-  do {
-    const response = await getOpportunities({ page, limit: 100 }, { signal })
-    if (response.status !== 'ok' || !Array.isArray(response.data)) throw new Error('Invalid opportunities response')
-    const opportunity = response.data.find(item => item.slug === slug)
-    if (opportunity) return { ...opportunity, id: opportunity._id ?? opportunity.id }
-    totalPages = response.pagination?.totalPages ?? 1
-    page += 1
-  } while (page <= totalPages)
-  return null
+  try {
+    const response = await apiClient.get('/opportunities/' + encodeURIComponent(slug), { signal })
+    if (response.data.status !== 'ok' || !response.data.data) throw new Error('Invalid listing response')
+    const item = response.data.data
+    return { ...item, id: item._id ?? item.id }
+  } catch (error) {
+    if (error.response?.status === 404) return null
+    throw error
+  }
 }

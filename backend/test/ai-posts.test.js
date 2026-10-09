@@ -248,10 +248,14 @@ test('analyze → review/edit → approve → publish is revision-protected and 
   const extracted = result(); extracted.fields.title = { value: 'Engineer', evidence: 'Job vacancy: Engineer' }
   t.mock.method(globalThis, 'fetch', (url, options) => String(url).startsWith('https://generativelanguage.googleapis.com/') ? Promise.resolve(new Response(JSON.stringify(output(extracted)))) : nativeFetch(url, options))
   const posts = new Map()
-  const matches = filter => {
-    const post = posts.get(String(filter._id))
-    return post && (filter.revision === undefined || post.revision === filter.revision) && (!filter.status || (typeof filter.status === 'string' ? post.status === filter.status : filter.status.$in.includes(post.status))) ? post : null
-  }
+  const match = (post, filter) => Object.entries(filter).every(([key, value]) => {
+    if (key === '$or') return value.some(child => match(post, child))
+    if (value === null) return post[key] == null
+    if (value?.$ne !== undefined) return post[key] !== value.$ne
+    if (value?.$in) return value.$in.includes(post[key])
+    return String(post[key]) === String(value)
+  })
+  const matches = filter => { const post = posts.get(String(filter._id)); return post && match(post, filter) ? post : null }
   t.mock.method(AssistantPost.prototype, 'save', async function() { posts.set(String(this._id), this); return this })
   t.mock.method(AssistantPost, 'findOne', filter => query(matches(filter)))
   t.mock.method(AssistantPost, 'findById', id => query(posts.get(String(id)) || null))
@@ -268,13 +272,13 @@ test('analyze → review/edit → approve → publish is revision-protected and 
   const path = '/' + post._id
   assert.equal((await send(path + '/publish', 'POST', { revision: post.revision })).status, 409)
   assert.equal((await send(path + '/approve', 'POST', { revision: post.revision })).status, 400)
-  const reviewBody = { revision: post.revision, postType: 'Internship', fields: { ...post.fields, title: 'Reviewed title', location: 'Lagos, Nigeria' }, deadlineDate: '' }
+  const reviewBody = { revision: post.revision, postType: 'Internship', destination: 'opportunities', opportunityCategory: 'Internships', fields: { ...post.fields, title: 'Reviewed title', location: 'Lagos, Nigeria' }, deadlineDate: '' }
   const saved = await send(path, 'PATCH', reviewBody); assert.equal(saved.status, 200); post = (await saved.json()).data
   assert.equal(post.status, 'review'); assert.equal(post.extractedFields.title, 'Engineer'); assert.equal(post.sourceImage.dataUrl, image.dataUrl)
   assert.equal((await send(path, 'PATCH', reviewBody)).status, 409)
   let approved = await send(path + '/approve', 'POST', { revision: post.revision, confirmed: true }); assert.equal(approved.status, 200); post = (await approved.json()).data
   const approvedRevision = post.revision
-  post = (await (await send(path, 'PATCH', { revision: post.revision, postType: post.postType, fields: post.fields, deadlineDate: '' })).json()).data
+  post = (await (await send(path, 'PATCH', { revision: post.revision, postType: post.postType, destination: post.destination, opportunityCategory: post.opportunityCategory, fields: post.fields, deadlineDate: '' })).json()).data
   assert.equal(post.status, 'review'); assert.equal(post.approvedAt, undefined)
   assert.equal((await send(path + '/publish', 'POST', { revision: approvedRevision })).status, 409)
   approved = await send(path + '/approve', 'POST', { revision: post.revision, confirmed: true }); post = (await approved.json()).data
@@ -291,7 +295,7 @@ test('approval rejects unresolved deadlines; publishing a past deadline immediat
   t.mock.method(mongoose.connection, 'transaction', async action => action({}))
   t.mock.method(Job.prototype, 'save', async function() { return this })
   const fields = { ...blankFields(), title: 'Original title', location: 'Nigeria', deadline: 'January 31' }
-  const post = new AssistantPost({ postType: 'Job', fields, extractedFields: fields, createdBy: admin._id, sourceText: 'Original source retained', status: 'review' })
+  const post = new AssistantPost({ postType: 'Job', destination: 'jobs', fields, extractedFields: fields, createdBy: admin._id, sourceText: 'Original source retained', status: 'review' })
   t.mock.method(AssistantPost, 'findOne', () => query(post))
   t.mock.method(AssistantPost, 'findOneAndUpdate', (_filter, update) => { post.set(update.$set); post.revision++; return query(post) })
   const path = '/' + post._id
