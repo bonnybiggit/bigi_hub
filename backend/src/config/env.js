@@ -35,7 +35,9 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port,
   mongoUri,
-  corsOrigins: [...new Set([...corsOrigins, ...adminOrigins])],
+  // The deployed public site must work even when CORS_ORIGINS retains local values.
+  // This does not grant the public origin permission for authenticated admin writes.
+  corsOrigins: [...new Set([...corsOrigins, ...adminOrigins, 'https://bigihub.netlify.app'])],
   adminOrigins,
   jwtSecret,
   initialAdminEmail: process.env.INITIAL_ADMIN_EMAIL,

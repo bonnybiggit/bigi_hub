@@ -8,6 +8,21 @@ import { PRODUCTION_API_URL, resolveApiBaseUrl } from '../src/utils/apiBaseUrl.j
 import { listingHighlights } from '../src/utils/listingHighlights.js'
 import { subscribeListingRefresh } from '../src/utils/listingRefresh.js'
 import { PUBLIC_CATEGORIES, NAVIGATION_CATEGORIES, listingPath, detailPath } from '../src/config/contentCategories.js'
+import { filterAndSortJobs } from '../src/data/jobs.js'
+import { filterAndSortOpportunities } from '../src/data/opportunities.js'
+
+test('default frontend filters retain published records with missing optional work type and arbitrary reviewed locations', () => {
+  const record = { _id: 'published-id', id: 'published-id', title: 'Reviewed title', slug: 'reviewed-title',
+    organization: 'Source organization', description: 'Source description', location: 'Nigeria', countryCode: 'NG',
+    listedDate: '2026-10-09', deadline: '2099-01-01', requirements: [], jobType: 'Not specified', category: 'Grants' }
+  assert.deepEqual(filterAndSortJobs([record], '', {}, 'newest'), [record])
+  assert.deepEqual(filterAndSortOpportunities([record], '', {}, 'newest'), [record])
+  assert.deepEqual(filterAndSortJobs([record], 'Reviewed', {}, 'newest'), [record])
+  assert.deepEqual(filterAndSortOpportunities([record], '', { category: 'Grants' }, 'newest'), [record])
+  // Explicit user filters still narrow results; missing facts are never invented.
+  assert.deepEqual(filterAndSortJobs([record], '', { workType: 'Remote' }, 'newest'), [])
+  assert.deepEqual(filterAndSortOpportunities([record], '', { category: 'Training' }, 'newest'), [])
+})
 
 test('public route/navigation configuration preserves the three listing and detail paths', () => {
   assert.deepEqual(NAVIGATION_CATEGORIES.map(item => item.label), ['Jobs', 'Opportunities', 'Scholarships'])

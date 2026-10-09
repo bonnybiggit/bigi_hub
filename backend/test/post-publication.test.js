@@ -113,8 +113,30 @@ async function harness(t) {
     body: JSON.stringify({ revision: post.revision, confirmed }),
   })
   return { drafts, records, publish, add, reopen: post => fetch(`${base}/admin/ai-posts/${post._id}/reopen`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5174', Cookie: COOKIE_NAME + '=' + issueToken(admin) }, body: JSON.stringify({ revision: post.revision, confirmed: true }) }), edit: (post, body) => fetch(`${base}/admin/ai-posts/${post._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5174', Cookie: COOKIE_NAME + '=' + issueToken(admin) }, body: JSON.stringify(body) }), remove: (post, body = { revision: post.revision, confirmed: true, scope: 'assistant-only' }, options = {}) => fetch(`${base}/admin/ai-posts/${post._id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', Origin: options.origin || 'http://localhost:5174', ...(options.guest ? {} : { Cookie: COOKIE_NAME + '=' + issueToken(admin) }) }, body: JSON.stringify(body) }), detail: (resource, slug) => fetch(`${base}/${resource}/${slug}`), list: resource => fetch(`${base}/${resource}`),
+    publicList: (resource, origin = 'https://bigihub.netlify.app') => fetch(`${base}/${resource}`, { headers: { Origin: origin } }),
+    publicDetail: (resource, slug) => fetch(`${base}/${resource}/${slug}`, { headers: { Origin: 'https://bigihub.netlify.app' } }),
     approve, standalone: () => { standalone = true }, failActivation: () => { failActivation = true }, recover: () => { failSave = false; failActivation = false }, failWrite: () => { failSave = true }, loseClaim: () => { loseClaim = true } }
 }
+
+test('published records are readable from the public website origin without granting admin write access', async t => {
+  const h = await harness(t)
+  for (const [destination, category] of [['jobs', ''], ['opportunities', 'Grants'], ['scholarships', '']]) {
+    const post = h.add(draft('Other', { destination, opportunityCategory: category }))
+    assert.equal((await h.publish(post, { origin: 'https://bigihub.netlify.app' })).status, 403)
+    assert.equal((await h.publish(post)).status, 200)
+    const listing = await h.publicList(destination)
+    assert.equal(listing.status, 200)
+    assert.equal(listing.headers.get('access-control-allow-origin'), 'https://bigihub.netlify.app')
+    assert.match(listing.headers.get('vary'), /Origin/)
+    assert.equal((await listing.json()).data[0]._id, String(post._id))
+    const detail = await h.publicDetail(destination, post.publicSlug)
+    assert.equal(detail.status, 200)
+    assert.equal(detail.headers.get('access-control-allow-origin'), 'https://bigihub.netlify.app')
+    assert.equal((await detail.json()).data._id, String(post._id))
+    assert.equal((await h.publicList(destination, 'https://untrusted.example')).headers.get('access-control-allow-origin'), null)
+    assert.equal((await h.publish(post)).status, 409)
+  }
+})
 
 test('approval catches publication-only field failures; corrected review can approve and publish once', async t => {
   const h = await harness(t)
