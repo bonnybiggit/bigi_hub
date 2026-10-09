@@ -1,3 +1,4 @@
+import { NAVIGATION_CATEGORIES, listingPath } from '../config/contentCategories.js'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
@@ -54,9 +55,7 @@ function Header() {
       <nav id="primary-navigation" className={'header-navigation' + (mobile && open ? ' is-open' : '')} aria-label="Main navigation" inert={mobile && !open} onClick={() => setOpen(false)}>
         <div className="header-menu-inner"><ul className="site-nav">
           <li><NavLink to="/" end>Home</NavLink></li>
-          <li><NavLink to="/jobs" end>Jobs</NavLink></li>
-          <li><NavLink to="/opportunities" end>Opportunities</NavLink></li>
-          <li><NavLink to="/scholarships" end>Scholarships</NavLink></li>
+          {NAVIGATION_CATEGORIES.map(category => <li key={category.id}><NavLink to={listingPath(category.id)} end>{category.label}</NavLink></li>)}
           <li><NavLink to="/search">Search</NavLink></li>
         </ul></div>
       </nav>

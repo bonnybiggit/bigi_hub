@@ -1,4 +1,5 @@
-﻿import { useRef, useState } from 'react'
+import { detailPath } from '../config/contentCategories.js'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Building2, Search, SlidersHorizontal, Mail } from 'lucide-react'
 import OpportunityCard from '../components/OpportunityCard.jsx'
@@ -111,7 +112,7 @@ function Jobs({ savedJobIds, onSaveJob }) {
             <div className="jobs-list">
               {visibleJobs.map((job) => (
                 <OpportunityCard key={job.id} {...job} compact category={job.jobType}
-                  to={`/jobs/${job.slug}`} cta="View Job" saved={savedJobIds.includes(job.id)} onSave={() => onSaveJob(job.id)} />
+                  to={detailPath('jobs', job.slug)} cta="View Job" saved={savedJobIds.includes(job.id)} onSave={() => onSaveJob(job.id)} />
               ))}
             </div>
             {!loading && !error && results.length === 0 && (
@@ -146,7 +147,7 @@ function Jobs({ savedJobIds, onSaveJob }) {
                 <li key={job.id}>
                   <Building2 size={18} aria-hidden="true" />
                   <div>
-                    <Link to={`/jobs/${job.slug}`}>{job.title}</Link>
+                    <Link to={detailPath('jobs', job.slug)}>{job.title}</Link>
                     <p>{job.jobType}{job.isDemo && ' / Demo'}</p>
                     <p>{job.location}</p>
                   </div>

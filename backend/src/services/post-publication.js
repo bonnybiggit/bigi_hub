@@ -5,6 +5,7 @@ import Opportunity from '../models/Opportunity.js'
 import AssistantPost from '../models/AssistantPost.js'
 import { inputError, validateDestination } from '../validation/ai-posts.js'
 import { expiryDate } from './post-expiry.js'
+import { publicCategory } from '../config/content-categories.js'
 
 const countries = [['NG', 'Nigeria'], ['GH', 'Ghana'], ['KE', 'Kenya'], ['ZA', 'South Africa'], ['RW', 'Rwanda'], ['SN', 'Senegal']]
 const missing = value => value?.trim() || 'Not specified'
@@ -43,7 +44,8 @@ export async function reopenLegacyPublication(id, revision) {
 
 export function publicListing(post, now = new Date()) {
   validateDestination(post.destination, post.opportunityCategory)
-  const Model = { jobs: Job, scholarships: Scholarship, opportunities: Opportunity }[post.destination]
+  const Model = { Job, Scholarship, Opportunity }[publicCategory(post.destination).model]
+  if (!Model) throw inputError('This destination has no publication model configured.')
   const fields = post.fields
   if (!fields.title?.trim()) throw inputError('A reviewed title is required for public publication.', { title: 'Enter the source title before approving.' })
   // No default country: use only an explicit supported name/code in reviewed location.

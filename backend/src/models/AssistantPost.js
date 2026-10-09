@@ -1,9 +1,9 @@
 import mongoose from 'mongoose'
-import { POST_TYPES, POST_FIELDS } from '../validation/ai-posts.js'
+import { POST_TYPES, POST_FIELDS, PUBLIC_DESTINATIONS } from '../validation/ai-posts.js'
 const fieldsSchema = new mongoose.Schema(Object.fromEntries(Object.entries(POST_FIELDS).map(([key, maxlength]) => [key, { type: String, default: '', maxlength }])), { _id: false })
 const schema = new mongoose.Schema({
   postType: { type: String, enum: POST_TYPES, required: true },
-  destination: { type: String, enum: ['', 'jobs', 'opportunities', 'scholarships'], default: '' },
+  destination: { type: String, enum: ['', ...PUBLIC_DESTINATIONS], default: '' },
   opportunityCategory: { type: String, default: '' },
   publicRecordId: mongoose.Schema.Types.ObjectId,
   publicSlug: String,

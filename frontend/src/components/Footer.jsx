@@ -1,3 +1,4 @@
+import { NAVIGATION_CATEGORIES, listingPath } from '../config/contentCategories.js'
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../styles/footer.css'
@@ -21,7 +22,7 @@ function Footer() {
       <div className="site-footer-content">
         <div className="footer-brand"><Link className="site-brand" to="/">Bigi_Hub</Link><p>Discover jobs, scholarships and opportunities across Nigeria and Africa. Take your next step.</p></div>
         <nav className="footer-navigation" aria-label="Footer navigation">
-          <div><h2>Explore</h2><ul><li><Link to="/jobs">Jobs</Link></li><li><Link to="/opportunities">Opportunities</Link></li><li><Link to="/scholarships">Scholarships</Link></li></ul></div>
+          <div><h2>Explore</h2><ul>{NAVIGATION_CATEGORIES.map(category => <li key={category.id}><Link to={listingPath(category.id)}>{category.label}</Link></li>)}</ul></div>
           <div><h2>Site</h2><ul><li><Link to="/">Home</Link></li><li><Link to="/search">Search</Link></li></ul></div>
         </nav>
         <section className="footer-newsletter" aria-labelledby="footer-newsletter-title"><h2 id="footer-newsletter-title">Stay in the loop</h2><p>Updates on jobs, scholarships and opportunities.</p>

@@ -1,3 +1,4 @@
+import { PUBLIC_CATEGORIES, detailPath } from '../config/contentCategories.js'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Search as SearchIcon } from 'lucide-react'
@@ -8,11 +9,11 @@ import { getScholarships } from '../services/scholarships.service.js'
 import '../styles/home.css'
 import '../styles/search.css'
 
-const groups = [
-  { key: 'jobs', title: 'Jobs', type: 'Job', fetch: getJobs },
-  { key: 'opportunities', title: 'Opportunities', type: 'Opportunity', fetch: getOpportunities },
-  { key: 'scholarships', title: 'Scholarships', type: 'Scholarship', fetch: getScholarships },
-]
+const fetchers = { jobs: getJobs, opportunities: getOpportunities, scholarships: getScholarships }
+const groups = PUBLIC_CATEGORIES.map(item => {
+  if (!fetchers[item.id]) throw new Error(`Missing search service for ${item.id}`)
+  return { key: item.id, title: item.label, type: item.singular, fetch: fetchers[item.id] }
+})
 const LIMIT = 9
 
 function SearchResults({ query, onReset }) {
@@ -53,10 +54,10 @@ function SearchResults({ query, onReset }) {
           {result.value.data.length === 0 && <p>No {group.title.toLowerCase()} found for this search.</p>}
           <ul className="search-result-grid">{result.value.data.map(item => <li className="search-result" key={item._id ?? item.id ?? item.slug}>
             <span className="home-tag">{group.type}</span>
-            <h4><Link to={`/${group.key}/${item.slug}`}>{item.title || 'Not specified'}</Link></h4>
+            <h4><Link to={detailPath(group.key, item.slug)}>{item.title || 'Not specified'}</Link></h4>
             {item.organization && <p>{item.organization}</p>}
             <dl>{item.location && <div><dt>Location</dt><dd>{item.location}</dd></div>}{item.category && <div><dt>Category</dt><dd>{item.category}</dd></div>}{item.level && <div><dt>Study level</dt><dd>{item.level}</dd></div>}</dl>
-            <Link className="home-text-link" to={`/${group.key}/${item.slug}`}>View {group.type.toLowerCase()}<ArrowRight size={18} aria-hidden="true" /></Link>
+            <Link className="home-text-link" to={detailPath(group.key, item.slug)}>View {group.type.toLowerCase()}<ArrowRight size={18} aria-hidden="true" /></Link>
           </li>)}</ul>
           <Pagination currentPage={pages[group.key]} totalPages={result.value.pagination.totalPages} label={group.title + ' search result pages'} onPageChange={page => {
             setPages(current => ({ ...current, [group.key]: page }))

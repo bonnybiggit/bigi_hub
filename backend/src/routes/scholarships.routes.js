@@ -1,3 +1,4 @@
+import { publicCategory } from '../config/content-categories.js'
 import { Router } from 'express'
 import Scholarship from '../models/Scholarship.js'
 
@@ -16,7 +17,7 @@ function getTextFilter(value) {
 scholarshipsRouter.get('/', async (request, response, next) => {
   try {
     response.set('Cache-Control', 'no-store')
-    const { page, limit, search } = validateListingQuery(request.query, ["country","eligibility","location","level"])
+    const { page, limit, search } = validateListingQuery(request.query, publicCategory('scholarships').filters)
     const filters = []
 
     if (search) {

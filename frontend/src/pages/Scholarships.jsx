@@ -1,3 +1,4 @@
+import { detailPath } from '../config/contentCategories.js'
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, GraduationCap, MapPin, Search, SlidersHorizontal } from 'lucide-react'
@@ -72,7 +73,7 @@ function Scholarships() {
                 {scholarship.eligibility && <div><dt>Eligibility</dt><dd>{scholarship.eligibility}</dd></div>}
                 <div><dt>Apply by</dt><dd><time dateTime={scholarship.deadline}>{new Date(scholarship.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}</time></dd></div>
               </dl>
-              <div className="scholarship-actions"><Link className="home-button home-button-primary" to={`/scholarships/${scholarship.slug}`} aria-label={'View scholarship: ' + scholarship.title}>View Scholarship <ArrowUpRight size={17} aria-hidden="true" /></Link></div>
+              <div className="scholarship-actions"><Link className="home-button home-button-primary" to={detailPath('scholarships', scholarship.slug)} aria-label={'View scholarship: ' + scholarship.title}>View Scholarship <ArrowUpRight size={17} aria-hidden="true" /></Link></div>
             </article>
           ))}
         </div>

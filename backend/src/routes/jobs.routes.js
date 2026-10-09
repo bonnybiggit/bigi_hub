@@ -1,3 +1,4 @@
+import { publicCategory } from '../config/content-categories.js'
 import { Router } from 'express'
 import Job from '../models/Job.js'
 
@@ -16,7 +17,7 @@ function getTextFilter(value) {
 jobsRouter.get('/', async (request, response, next) => {
   try {
     response.set('Cache-Control', 'no-store')
-    const { page, limit, search } = validateListingQuery(request.query, ["location","jobType","workType","experience"])
+    const { page, limit, search } = validateListingQuery(request.query, publicCategory('jobs').filters)
     const filters = []
 
     if (search) {

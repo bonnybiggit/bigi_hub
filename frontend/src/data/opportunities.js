@@ -1,15 +1,7 @@
+import { OPPORTUNITY_CATEGORIES } from '../config/contentCategories.js'
 export const supportedOpportunityCountryCodes = ['NG', 'GH', 'KE', 'ZA', 'RW', 'SN']
 
-export const opportunityCategories = [
-  'Scholarships',
-  'Grants',
-  'Fellowships',
-  'Internships',
-  'Graduate Programs',
-  'Training',
-  'Competitions',
-  'Volunteering'
-]
+export const opportunityCategories = OPPORTUNITY_CATEGORIES
 
 export const demoOpportunities = [
   {
@@ -356,16 +348,7 @@ export const opportunityFilterFields = [
   {
     key: 'category',
     label: 'Opportunity Type',
-    options: [
-      { value: 'Scholarships', label: 'Scholarships' },
-      { value: 'Grants', label: 'Grants' },
-      { value: 'Fellowships', label: 'Fellowships' },
-      { value: 'Internships', label: 'Internships' },
-      { value: 'Graduate Programs', label: 'Graduate Programs' },
-      { value: 'Training', label: 'Training' },
-      { value: 'Competitions', label: 'Competitions' },
-      { value: 'Volunteering', label: 'Volunteering' }
-    ]
+    options: opportunityCategories.map(label => ({ value: label, label }))
   },
   {
     key: 'eligibility',

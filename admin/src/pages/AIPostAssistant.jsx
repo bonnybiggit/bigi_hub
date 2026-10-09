@@ -4,9 +4,10 @@ import PostSources from '../components/PostSources.jsx'
 import { usePageTitle } from '../hooks/usePageTitle.js'
 import { analyzePost, approvePost, deleteAssistantPost, reopenAssistantPost, verifyPublicPost, getAIConfiguration, getAssistantPost, listAssistantPosts, publishPost, savePostReview } from '../services/aiPosts.service.js'
 import { assistantDate, assistantFields, displayFact, postStatus, postTypes, readFlyer } from '../utils/assistantPost.js'
+import { PUBLIC_CATEGORIES, OPPORTUNITY_CATEGORIES, detailPath } from '../../../backend/src/config/content-categories.js'
 
-const destinations = [['jobs', 'Jobs'], ['opportunities', 'Opportunities'], ['scholarships', 'Scholarships']]
-const categories = ['Scholarships', 'Grants', 'Fellowships', 'Internships', 'Graduate Programs', 'Training', 'Competitions', 'Volunteering']
+const destinations = PUBLIC_CATEGORIES.filter(item => item.publishable).map(item => [item.id, item.label])
+const categories = OPPORTUNITY_CATEGORIES
 const publicSite = (import.meta.env.VITE_PUBLIC_SITE_URL || 'https://bigihub.netlify.app').replace(/\/$/, '')
 
 export default function AIPostAssistant() {
@@ -134,7 +135,7 @@ export default function AIPostAssistant() {
           {approved && <><p>{post.deadlineDate && new Date(post.deadlineDate + 'T23:59:59.999+01:00') < new Date() ? 'This deadline has passed. Publishing will immediately archive the post.' : 'Publish only after completing your source review.'}</p><div className="job-actions"><button className="secondary-button" disabled={Boolean(busy)} onClick={() => { setDirty(true); setConfirmed(false) }}>Return to editing</button><button className="auth-button" disabled={Boolean(busy)} onClick={() => run('publish', publishCurrent)}>Publish approved post</button></div></>}
           {readOnly && !pending && !post.publicRecordId && <><p>This older assistant publication has no stored public link. Return it to review to select a public destination and approve again.</p><button className="secondary-button" disabled={Boolean(busy)} onClick={() => { if (window.confirm('Return this assistant-only publication to review? Its original flyer is retained. A new review and approval will be required.')) run('reopen', async () => { const response = await reopenAssistantPost(post._id, post.revision); choosePost(response.data); reloadQueue(); setMessage(response.message) }) }}>Return assistant-only publication to review</button></>}
           {pending && <><p role="status">Publication is pending. Its destination and record link are saved; resume to finish safely before deleting or editing.</p><button className="auth-button" disabled={Boolean(busy)} onClick={() => run('publish', publishCurrent)}>Resume publication</button></>}
-          {post.publicRecordId && <p>Public record: {post.publicRecordId}. <a href={publicSite + '/' + post.destination + '/' + post.publicSlug} target="_blank" rel="noreferrer">Open public detail page</a>. Deleting this assistant record does not remove that public listing.</p>}
+          {post.publicRecordId && <p>Public record: {post.publicRecordId}. <a href={publicSite + detailPath(post.destination, post.publicSlug)} target="_blank" rel="noreferrer">Open public detail page</a>. Deleting this assistant record does not remove that public listing.</p>}
           {post.publicRecordId && !pending && post.status === 'published' && <button className="secondary-button" disabled={Boolean(busy)} onClick={() => run('verify', async () => { await verifyPublicPost(post); setMessage('Public detail API verified.') })}>Verify public record</button>}
           {readOnly && <p>{post.status === 'archived' ? 'Expired and archived. Content and original source are preserved.' : `Published ${assistantDate(post.publishedAt)} (Africa/Lagos).`}</p>}
         </> : <form onSubmit={event => { event.preventDefault(); run('save', async () => { await saveReview(); reloadQueue(); setMessage('Review saved. Approval and publishing are still separate steps.') }) }} noValidate>

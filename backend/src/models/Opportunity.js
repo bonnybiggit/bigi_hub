@@ -1,17 +1,9 @@
 import mongoose from 'mongoose'
+import { OPPORTUNITY_CATEGORIES } from '../config/content-categories.js'
 import { applicationUrlValidation, slugValidation, DATABASE_TIMEOUT_MS } from '../validation/listings.js'
 
 const supportedCountryCodes = ['NG', 'GH', 'KE', 'ZA', 'RW', 'SN']
-const categories = [
-  'Scholarships',
-  'Grants',
-  'Fellowships',
-  'Internships',
-  'Graduate Programs',
-  'Training',
-  'Competitions',
-  'Volunteering',
-]
+const categories = OPPORTUNITY_CATEGORIES
 
 const opportunitySchema = new mongoose.Schema({
   assistantPostId: { type: mongoose.Schema.Types.ObjectId, immutable: true },

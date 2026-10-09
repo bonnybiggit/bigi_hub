@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 import { applicationUrlValidation } from './listings.js'
+import { PUBLIC_DESTINATIONS, OPPORTUNITY_CATEGORIES } from '../config/content-categories.js'
+export { PUBLIC_DESTINATIONS, OPPORTUNITY_CATEGORIES } from '../config/content-categories.js'
 
 export const POST_TYPES = ['Job', 'Scholarship', 'Grant', 'Fellowship', 'Internship', 'Training', 'Competition', 'Event', 'Other']
-export const PUBLIC_DESTINATIONS = ['jobs', 'opportunities', 'scholarships']
-export const OPPORTUNITY_CATEGORIES = ['Scholarships', 'Grants', 'Fellowships', 'Internships', 'Graduate Programs', 'Training', 'Competitions', 'Volunteering']
 export function validateDestination(destination, opportunityCategory = '') {
   if (!PUBLIC_DESTINATIONS.includes(destination)) throw inputError('Explicitly select Jobs, Opportunities or Scholarships before approval/publication.', { destination: 'Select a public destination.' })
   if (destination === 'opportunities' && !OPPORTUNITY_CATEGORIES.includes(opportunityCategory)) throw inputError('Select a supported opportunity category.', { opportunityCategory: 'Select the public opportunity category.' })

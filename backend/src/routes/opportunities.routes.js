@@ -1,3 +1,4 @@
+import { publicCategory } from '../config/content-categories.js'
 import { Router } from 'express'
 import Opportunity from '../models/Opportunity.js'
 
@@ -16,7 +17,7 @@ function getTextFilter(value) {
 opportunitiesRouter.get('/', async (request, response, next) => {
   try {
     response.set('Cache-Control', 'no-store')
-    const { page, limit, search } = validateListingQuery(request.query, ["category","location","eligibility","countryCode"])
+    const { page, limit, search } = validateListingQuery(request.query, publicCategory('opportunities').filters)
     const filters = []
 
     if (search) {

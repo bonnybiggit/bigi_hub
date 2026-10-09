@@ -1,32 +1,23 @@
+import { PUBLIC_CATEGORIES, listingPath } from '../config/contentCategories.js'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ArrowRight, BriefcaseBusiness, CalendarDays, GraduationCap, HandCoins,
-  Mail, Sprout, Trophy, Users, Wrench,
+  ArrowRight, BriefcaseBusiness, GraduationCap, Mail, Users,
 } from 'lucide-react'
 import CategoryCard from '../components/CategoryCard.jsx'
 import OpportunityCard from '../components/OpportunityCard.jsx'
 import ArticleCard from '../components/ArticleCard.jsx'
+import useJobs from '../hooks/useJobs.js'
+import useOpportunities from '../hooks/useOpportunities.js'
+import useScholarships from '../hooks/useScholarships.js'
+import { listingHighlights } from '../utils/listingHighlights.js'
 import '../styles/home.css'
 import '../styles/public.css'
 
-const categories = [
-  { name: 'Jobs', description: 'Take your next career step.', icon: BriefcaseBusiness, to: '/jobs' },
-  { name: 'Scholarships', description: 'Find support for your studies.', icon: GraduationCap, to: '/scholarships' },
-  { name: 'Grants', description: 'Bring your ideas to life.', icon: HandCoins, to: '/opportunities' },
-  { name: 'Fellowships', description: 'Learn alongside inspiring people.', icon: Users, to: '/opportunities' },
-  { name: 'Internships', description: 'Build experience that matters.', icon: Sprout, to: '/opportunities' },
-  { name: 'Training', description: 'Develop practical new skills.', icon: Wrench, to: '/opportunities' },
-  { name: 'Competitions', description: 'Put your talent to the test.', icon: Trophy, to: '/opportunities' },
-  { name: 'Events', description: 'Connect, learn and exchange ideas.', icon: CalendarDays, to: '/opportunities' },
-]
-
-// Sample content for the homepage preview; these are not live listings.
-const opportunities = [
-  { id: 'graduate-trainee', title: 'Graduate Trainee Programme', category: 'Jobs', organization: 'Sample Careers Network', deadline: '2026-10-30', deadlineLabel: '30 October 2026', to: '/jobs', cta: 'Explore jobs' },
-  { id: 'postgraduate-scholarship', title: 'Postgraduate Study Scholarship', category: 'Scholarships', organization: 'Example Education Foundation', deadline: '2026-11-15', deadlineLabel: '15 November 2026', to: '/scholarships', cta: 'Explore scholarships' },
-  { id: 'community-grant', title: 'Community Innovation Grant', category: 'Grants', organization: 'Sample Community Fund', deadline: '2026-11-20', deadlineLabel: '20 November 2026', to: '/opportunities', cta: 'Explore opportunities' },
-]
+const categoryIcons = { jobs: BriefcaseBusiness, opportunities: Users, scholarships: GraduationCap }
+const categories = PUBLIC_CATEGORIES.filter(item => item.homepageVisible).map(item => ({
+  name: item.label, description: item.description, icon: categoryIcons[item.id], to: listingPath(item.id),
+}))
 
 const articles = [
   { id: 'application-checklist', title: 'Your next application starts with a clear plan', category: 'Career guide', excerpt: 'A simple checklist for organising your documents, tracking deadlines and preparing your next application.', date: '2026-09-08', dateLabel: '8 September 2026' },
@@ -35,6 +26,12 @@ const articles = [
 ]
 
 function Home() {
+  const jobs = useJobs()
+  const opportunities = useOpportunities()
+  const scholarships = useScholarships({ limit: 3 })
+  const loading = jobs.loading || opportunities.loading || scholarships.loading
+  const error = jobs.error || opportunities.error || scholarships.error
+  const highlights = listingHighlights(jobs.jobs, opportunities.opportunities, scholarships.scholarships)
   const [newsletterMessage, setNewsletterMessage] = useState('')
 
   function handleSubscribe(event) {
@@ -77,13 +74,16 @@ function Home() {
         <div className="home-section-heading home-section-heading-row">
           <div>
             <h2 id="home-opportunities-title">Opportunity Highlights</h2>
-            <p>Sample listings for this preview. These are not open applications.</p>
+            <p>Latest published jobs, opportunities and scholarships.</p>
           </div>
           <Link className="home-text-link" to="/opportunities">Explore opportunities <ArrowRight size={18} aria-hidden="true" /></Link>
         </div>
-        <div className="home-card-grid">
-          {opportunities.map((opportunity) => (
-            <OpportunityCard key={opportunity.id} {...opportunity} />
+        {loading && <p role="status">Loading latest listings...</p>}
+        {error && <div role="alert"><p>Some listings could not be loaded. Please try again.</p><button className="home-button home-button-secondary" type="button" onClick={() => { jobs.retry(); opportunities.retry(); scholarships.retry() }}>Try again</button></div>}
+        {!loading && !error && highlights.length === 0 && <p role="status">No listings available yet. Check back soon.</p>}
+        <div className="home-card-grid" aria-busy={loading}>
+          {highlights.map((opportunity) => (
+            <OpportunityCard key={`${opportunity.section}-${opportunity.id}`} {...opportunity} />
           ))}
         </div>
       </section>

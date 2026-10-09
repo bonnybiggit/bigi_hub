@@ -1,4 +1,5 @@
 import { apiRequest } from './apiClient.js'
+import { publicCategory } from '../../../backend/src/config/content-categories.js'
 const path = 'admin/ai-posts'
 export const getAIConfiguration = signal => apiRequest(`${path}/configuration`, { signal })
 export const listAssistantPosts = (params, signal) => apiRequest(path, { params, signal })
@@ -10,7 +11,7 @@ export const publishPost = (id, revision) => apiRequest(`${path}/${id}/publish`,
 export const deleteAssistantPost = (id, revision) => apiRequest(`${path}/${id}`, { method: 'DELETE', body: { revision, confirmed: true, scope: 'assistant-only' } })
 export const reopenAssistantPost = (id, revision) => apiRequest(`${path}/${id}/reopen`, { method: 'POST', body: { revision, confirmed: true } })
 export async function verifyPublicPost(post) {
-  const response = await apiRequest(`${post.destination}/${encodeURIComponent(post.publicSlug)}`)
+  const response = await apiRequest(`${publicCategory(post.destination).apiPath.slice(1)}/${encodeURIComponent(post.publicSlug)}`)
   if (String(response.data?._id) !== String(post.publicRecordId)) throw new Error('The public record could not be verified.')
   return response.data
 }
