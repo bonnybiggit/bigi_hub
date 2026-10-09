@@ -95,13 +95,14 @@ export default function AIPostAssistant() {
   const pending = post?.publicationState === 'pending'
   const readOnly = post && (pending || ['published', 'archived'].includes(post.status))
   const approved = post?.status === 'approved' && !dirty && !pending
+  const approvalBlock = !form?.destination ? 'Select a public destination before approval.' : form.destination === 'opportunities' && !form.opportunityCategory ? 'Select an opportunity category before approval.' : !confirmed ? 'Confirm your source review before approval. Editing or saving the review requires confirmation again.' : ''
   const step = busy === 'analyze' ? 1 : !post ? 0 : readOnly ? 4 : approved ? 3 : 2
   const source = post ? { text: post.sourceText, image: post.sourceImage, imageText: post.imageText, evidence: post.evidence } : { text: sourceText, image }
   return <>
     <PageHeader title="AI Post Assistant" description="Extract source facts, review every field, then approve and publish when ready." />
     <ol className="assistant-steps" aria-label="Post workflow">{['Upload / Paste', 'Analyze', 'Review / Edit', 'Approve', 'Publish'].map((label, index) => <li key={label} aria-current={index === step ? 'step' : undefined}>{index + 1}. {label}</li>)}</ol>
     <p className="assistant-note">AI never publishes automatically. Missing facts are shown as “Not specified”. Check every extraction against its source.</p>
-    {error && <p className="job-notice field-error" role="alert">{error} {error.includes('post changed') && post && <button className="secondary-button" disabled={Boolean(busy)} onClick={() => run('open', async () => { choosePost((await getAssistantPost(post._id)).data); setMessage('Latest post loaded. Review your changes again.') })}>Reload post</button>}</p>}
+    {error && <div className="job-notice field-error" role="alert"><p>{error}</p>{Object.entries(fieldErrors).map(([field, detail]) => detail && <p key={field}>{field}: {detail}</p>)}{error.includes('post changed') && post && <button className="secondary-button" disabled={Boolean(busy)} onClick={() => run('open', async () => { choosePost((await getAssistantPost(post._id)).data); setMessage('Latest post loaded. Review your changes again.') })}>Reload post</button>}</div>}
     {message && <p className="job-notice" role="status">{message}</p>}
     {busy && <p role="status">{busy === 'analyze' ? 'Analyzing source content…' : busy === 'image' ? 'Reading image…' : 'Saving / loading post…'}</p>}
     {!post ? <section className="panel" aria-labelledby="assistant-input-title">
@@ -149,6 +150,7 @@ export default function AIPostAssistant() {
             <div className="job-field job-field-wide"><label htmlFor="assistant-deadline-date">Confirmed application deadline date</label><input id="assistant-deadline-date" name="deadlineDate" type="date" value={form.deadlineDate} onChange={changeMeta} aria-invalid={Boolean(fieldErrors.deadlineDate)} /><small>Only use a real source deadline. With no deadline, expiry is 3 months after publishing.</small>{fieldErrors.deadlineDate && <span className="field-error">{fieldErrors.deadlineDate}</span>}</div>
           </fieldset>
           <label className="assistant-confirm"><input type="checkbox" checked={confirmed} disabled={Boolean(busy)} onChange={event => setConfirmed(event.target.checked)} />I checked the source, classification, every available fact and deadline. I have not added unsupported information.</label>
+          {approvalBlock && <p role="status">{approvalBlock}</p>}
           <div className="job-actions"><button className="secondary-button" type="submit" disabled={Boolean(busy)}>Save review</button><button className="auth-button" type="button" disabled={!confirmed || !form.destination || (form.destination === 'opportunities' && !form.opportunityCategory) || Boolean(busy)} onClick={() => run('approve', async () => { const saved = await saveReview(); choosePost((await approvePost(saved._id, saved.revision)).data); reloadQueue(); setMessage('Post approved. Check the final review and select Publish when ready.') })}>Approve reviewed post</button></div>
           {dirty && <button className="secondary-button assistant-discard" type="button" disabled={Boolean(busy)} onClick={() => { choosePost(post); setMessage('Unsaved edits discarded. The saved draft and source remain available.') }}>Discard unsaved edits</button>}
         </form>}

@@ -5,7 +5,7 @@ import { validateSource, validateReview, validateRevision, validateDestination, 
 import { validateListingQuery } from '../validation/listings.js'
 import { analyzeSource, aiConfiguration } from '../services/post-analysis.js'
 import { archiveExpiredPosts } from '../services/post-expiry.js'
-import { publishPublicPost, publicationCapability, reopenLegacyPublication } from '../services/post-publication.js'
+import { publicListing, publishPublicPost, publicationCapability, reopenLegacyPublication } from '../services/post-publication.js'
 const router = Router()
 const bounded = query => query.maxTimeMS(3000).setOptions({ timeoutMS: 5000 })
 const stale = response => response.status(409).json({ status: 'error', message: 'The post changed or is no longer in this workflow step. Reload it and review again.' })
@@ -73,7 +73,9 @@ router.post('/:id/approve', safe(async (request, response) => {
   if (!current) return stale(response)
   validateDestination(current.destination, current.opportunityCategory)
   validateReview({ revision, postType: current.postType, fields: current.fields.toObject(), deadlineDate: current.deadlineDate, destination: current.destination, opportunityCategory: current.opportunityCategory })
-  const post = await bounded(AssistantPost.findOneAndUpdate({ _id: request.params.id, revision, status: 'review' }, { $set: { status: 'approved', approvedBy: request.admin._id, approvedAt: new Date() }, $inc: { revision: 1 } }, { new: true }).select('+sourceImage.data'))
+  // Approval must satisfy the same public-record requirements as publication.
+  await publicListing(current).listing.validate()
+  const post = await bounded(AssistantPost.findOneAndUpdate({ _id: request.params.id, revision, status: 'review' }, { $set: { status: 'approved', approvedBy: request.admin._id, approvedAt: new Date() }, $inc: { revision: 1 } }, { new: true, runValidators: true }).select('+sourceImage.data'))
   if (!post) return stale(response)
   response.json({ status: 'ok', data: sendPost(post) })
 }))

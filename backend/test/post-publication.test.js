@@ -108,9 +108,33 @@ async function harness(t) {
     body: JSON.stringify({ revision: options.revision ?? post.revision }),
   })
   const add = post => { drafts.set(String(post._id), post); return post }
+  const approve = (post, confirmed = true) => fetch(`${base}/admin/ai-posts/${post._id}/approve`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5174', Cookie: COOKIE_NAME + '=' + issueToken(admin) },
+    body: JSON.stringify({ revision: post.revision, confirmed }),
+  })
   return { drafts, records, publish, add, reopen: post => fetch(`${base}/admin/ai-posts/${post._id}/reopen`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5174', Cookie: COOKIE_NAME + '=' + issueToken(admin) }, body: JSON.stringify({ revision: post.revision, confirmed: true }) }), edit: (post, body) => fetch(`${base}/admin/ai-posts/${post._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5174', Cookie: COOKIE_NAME + '=' + issueToken(admin) }, body: JSON.stringify(body) }), remove: (post, body = { revision: post.revision, confirmed: true, scope: 'assistant-only' }, options = {}) => fetch(`${base}/admin/ai-posts/${post._id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', Origin: options.origin || 'http://localhost:5174', ...(options.guest ? {} : { Cookie: COOKIE_NAME + '=' + issueToken(admin) }) }, body: JSON.stringify(body) }), detail: (resource, slug) => fetch(`${base}/${resource}/${slug}`), list: resource => fetch(`${base}/${resource}`),
-    standalone: () => { standalone = true }, failActivation: () => { failActivation = true }, recover: () => { failSave = false; failActivation = false }, failWrite: () => { failSave = true }, loseClaim: () => { loseClaim = true } }
+    approve, standalone: () => { standalone = true }, failActivation: () => { failActivation = true }, recover: () => { failSave = false; failActivation = false }, failWrite: () => { failSave = true }, loseClaim: () => { loseClaim = true } }
 }
+
+test('approval catches publication-only field failures; corrected review can approve and publish once', async t => {
+  const h = await harness(t)
+  for (const [field, value] of [['location', 'Remote'], ['title', ''], ['workType', 'Unknown']]) {
+    const post = draft('Job', { status: 'review', approvedBy: undefined, approvedAt: undefined })
+    post.fields.set(field, value); h.add(post)
+    const revision = post.revision
+    const rejected = await h.approve(post)
+    assert.equal(rejected.status, 400)
+    assert.ok((await rejected.json()).errors[field])
+    assert.equal(post.status, 'review'); assert.equal(post.revision, revision)
+    assert.equal(post.approvedAt, undefined)
+    post.fields.set(field, draft().fields[field])
+    assert.equal((await h.approve(post, false)).status, 400)
+    assert.equal((await h.approve(post)).status, 200)
+    assert.equal((await h.publish(post)).status, 200)
+    assert.equal((await h.publish(post)).status, 409)
+  }
+  assert.equal(h.records.get('Job').size, 3)
+})
 
 for (const [type, Model, resource, category] of destinations) {
   test(`${type} publishes once into ${resource} and is visible through the public API`, async t => {
